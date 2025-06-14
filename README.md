@@ -1,0 +1,1 @@
+Cine Mind is a movie recommender system that uses Bag of Words and cosine similarity to recommend five movies most similar to a selected title after thorough data preprocessing and cleaning.

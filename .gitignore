@@ -1,0 +1,23 @@
+# Virtual environments
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Jupyter
+*.ipynb
+.ipynb_checkpoints/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Optional: Large or redundant files
+*.csv
+setup.sh
+Procfile
+
+# .pkl 
+*.pkl
