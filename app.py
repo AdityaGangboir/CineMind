@@ -201,28 +201,9 @@ div[data-testid="column"] div[data-testid="stImage"] img {
   cursor: pointer;
 }
 
-/* CARD FULL-CLICK OVERLAY: clicks anywhere on the card trigger the button */
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) {
-  position: relative !important;
+/* CARD HOVER STYLES */
+div[data-testid="column"]:has(div[data-testid="stImage"]) div[data-testid="stImage"] img {
   cursor: pointer !important;
-}
-div[data-testid="column"]:has(div[data-testid="stImage"]) .stButton {
-  position: static !important;
-  margin-top: 0 !important;
-}
-div[data-testid="column"]:has(div[data-testid="stImage"]) .stButton > button {
-  position: static !important;
-}
-div[data-testid="column"]:has(div[data-testid="stImage"]) .stButton > button::before {
-  content: "" !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  cursor: pointer !important;
-  z-index: 5 !important;
-  background: transparent !important;
 }
 div[data-testid="column"]:has(div[data-testid="stImage"]):hover div[data-testid="stImage"] img {
   opacity: 0.88 !important;
@@ -237,7 +218,7 @@ div[data-testid="column"]:has(div[data-testid="stImage"]):hover .stButton > butt
 /* ── EMPTY STATE ── */
 .empty {
   text-align: center;
-  padding: 2.2rem 2rem 1.6rem;
+  padding: 2.2rem 2rem 1.4rem;
   border: 1px dashed var(--bd);
   border-radius: 2px;
   margin-top: 0.8rem;
@@ -251,39 +232,15 @@ div[data-testid="column"]:has(div[data-testid="stImage"]):hover .stButton > butt
 }
 .empty-p { font-size: 0.8rem; color: var(--tl); line-height: 1.7; }
 
-/* ── TRY BUTTONS (TERTIARY) ── */
-button[kind="tertiary"],
-button[data-testid="baseButton-tertiary"] {
-  background: var(--s2) !important;
-  color: var(--tm) !important;
-  border: 1px solid var(--bd) !important;
-  border-radius: 2px !important;
-  padding: 0.5rem 0.8rem !important;
-  font-size: 0.74rem !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.3px !important;
-  text-transform: none !important;
-  width: 100% !important;
-  transition: all 0.15s ease !important;
-  line-height: 1.3 !important;
-  box-shadow: none !important;
-  font-family: 'DM Sans', sans-serif !important;
-}
-button[kind="tertiary"]:hover,
-button[data-testid="baseButton-tertiary"]:hover {
-  background: var(--s3) !important;
-  color: var(--th) !important;
-  border-color: var(--bd2) !important;
-  transform: translateY(-1px) !important;
-}
-
-/* Hide helper component iframe container */
+/* Invisible helper component iframe */
 div[data-testid="stCustomComponentV1"] {
-  display: none !important;
   height: 0 !important;
   min-height: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
+  max-height: 0 !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
 }
 
 /* ==================================================
@@ -441,12 +398,8 @@ similarity  = pickle.load(open("similarity.pkl", "rb"))
 
 TMDB_KEY = "8265bd1679663a7ea12ac168da84d2e8"
 
-# Popular seed suggestions shown on empty state (verified present in dataset)
-SEEDS = [
-    "Inception", "The Dark Knight", "Avatar", "The Avengers",
-    "Interstellar", "Fight Club", "The Matrix", "Pulp Fiction",
-    "The Shawshank Redemption", "Forrest Gump", "The Godfather", "Titanic"
-]
+# Curated universally recognized blockbusters for the try feature
+TRY_MOVIES = ["Avatar", "The Avengers", "Titanic", "The Dark Knight"]
 
 
 def fetch_poster(movie_id):
@@ -510,7 +463,7 @@ def stars_html(s):
 
 
 # Session state initialization
-for k, v in [("page","home"),("mid",None),("recs",[]),("src",None),("history",[]),("det_title","")]:
+for k, v in [("page","home"),("mid",None),("recs",[]),("src",None),("history",[]),("det_title",""),("_prev_query_movie",None)]:
     if k not in st.session_state:
         st.session_state[k] = v
 
@@ -531,9 +484,12 @@ if url_movie:
         st.session_state.mid = None
         if "movie" in st.query_params:
             del st.query_params["movie"]
-else:
+elif not url_movie and st.session_state.get("_prev_query_movie"):
+    # Browser back button was pressed to a URL without movie query parameter
     st.session_state.page = "home"
     st.session_state.mid = None
+
+st.session_state["_prev_query_movie"] = url_movie
 
 if url_src and url_src in movies["title"].values:
     if st.session_state.src != url_src or not st.session_state.recs:
@@ -550,20 +506,11 @@ elif not url_src and not url_movie:
 # ================================================================
 if st.session_state.page == "detail":
 
-    # Navbar: brand | breadcrumb | back button
-    nl, nc, nr = st.columns([2, 4, 1], gap="small")
+    # Navbar: brand on left, back button on right (no middle text)
+    nl, nr = st.columns([5, 1], gap="small")
     home_query = f"?src={urllib.parse.quote(st.session_state.src)}" if st.session_state.src else "?"
     with nl:
         st.markdown(f'<div class="dbar"><a href="{home_query}" target="_self" style="text-decoration:none;color:inherit;"><div class="d-brand">Cine<em>Mind</em></div></a></div>', unsafe_allow_html=True)
-    with nc:
-        cur = st.session_state.get("det_title", "")
-        if cur:
-            st.markdown(f"""
-            <div style="padding:0.95rem 0 0.75rem;">
-              <div class="d-crumb">
-                <span class="d-cc" style="max-width:380px;" title="{cur}">{cur}</span>
-              </div>
-            </div>""", unsafe_allow_html=True)
     with nr:
         st.markdown('<div class="bwrap" style="padding-top:0.75rem;">', unsafe_allow_html=True)
         if st.button("\u2190 Back", key="back_btn"):
@@ -579,6 +526,7 @@ if st.session_state.page == "detail":
             else:
                 st.session_state.page = "home"
                 st.session_state.mid = None
+            st.session_state["_prev_query_movie"] = None
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -769,33 +717,29 @@ if st.session_state.recs:
       function attachPosterClicks() {
         try {
           const pDoc = window.parent.document;
-          if (!pDoc || pDoc._cinePosterAttached) return;
-          pDoc._cinePosterAttached = true;
-          pDoc.addEventListener('click', function(e) {
-            const target = e.target;
-            const img = target.closest('div[data-testid="column"] div[data-testid="stImage"]') ||
-                        target.closest('div[data-testid="column"] img') ||
-                        target.closest('.poster-placeholder');
-            if (img) {
-              const col = img.closest('div[data-testid="column"]');
-              const btn = col ? col.querySelector('.stButton button') : null;
-              if (btn && target !== btn && !btn.contains(target)) {
+          if (!pDoc) return;
+          const cols = pDoc.querySelectorAll('div[data-testid="column"]');
+          cols.forEach(function(col) {
+            const img = col.querySelector('img') || col.querySelector('.poster-placeholder');
+            const btn = col.querySelector('.stButton button');
+            if (img && btn && !img._cineClickBound) {
+              img._cineClickBound = true;
+              img.style.cursor = 'pointer';
+              img.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 btn.click();
-              }
+              });
             }
-          }, true);
+          });
         } catch(err) {}
       }
       attachPosterClicks();
-      setInterval(attachPosterClicks, 400);
+      setInterval(attachPosterClicks, 250);
     })();
     </script>
     """, height=0, width=0)
 else:
-    # Pick 4 random seeds guaranteed to be present in the database
-    avail = [s for s in SEEDS if s in movies["title"].values]
-    picks = random.sample(avail, min(4, len(avail))) if avail else []
-
     st.markdown("""
     <div class="empty">
       <div class="empty-h">Select a film and click Discover</div>
@@ -804,17 +748,16 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-    if picks:
-        t_cols = st.columns(len(picks), gap="small")
-        for idx, p in enumerate(picks):
-            m_row = movies[movies["title"] == p]
-            if not m_row.empty:
-                mid_val = int(m_row["movie_id"].values[0])
-                with t_cols[idx]:
-                    if st.button(p, key=f"try_{idx}", type="tertiary", use_container_width=True):
-                        st.query_params["movie"] = str(mid_val)
-                        st.session_state.history = []
-                        st.session_state.mid = mid_val
-                        st.session_state.det_title = p
-                        st.session_state.page = "detail"
-                        st.rerun()
+    t_cols = st.columns(len(TRY_MOVIES), gap="small")
+    for idx, p in enumerate(TRY_MOVIES):
+        m_row = movies[movies["title"] == p]
+        if not m_row.empty:
+            mid_val = int(m_row["movie_id"].values[0])
+            with t_cols[idx]:
+                if st.button(p, key=f"try_{idx}", use_container_width=True):
+                    st.session_state.history = []
+                    st.session_state.mid = mid_val
+                    st.session_state.det_title = p
+                    st.session_state.page = "detail"
+                    st.query_params["movie"] = str(mid_val)
+                    st.rerun()
