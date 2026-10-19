@@ -1,10 +1,11 @@
-﻿import os
+import os
 import gdown
 import requests
 import streamlit as st
 import pickle
 import pandas as pd
 import random
+import urllib.parse
 
 st.set_page_config(page_title="CineMind", page_icon="C", layout="wide")
 
@@ -164,7 +165,54 @@ div[data-testid="column"] .stButton > button:hover {
 .rlabel strong { color: var(--th); font-weight: 600; letter-spacing: 1px; }
 .rline { flex: 1; height: 1px; background: var(--bd); }
 
-/* ── POSTER IMAGE IN CARD ── */
+/* ── POSTER LINK & IMAGE IN CARD ── */
+div[data-testid="column"] .stMarkdown:has(.poster-link) {
+  margin-bottom: 0 !important;
+}
+div[data-testid="column"] .stMarkdown:has(.poster-link) p {
+  margin: 0 !important;
+  line-height: 0 !important;
+}
+.poster-link {
+  display: block;
+  text-decoration: none;
+  cursor: pointer;
+  line-height: 0;
+  margin-bottom: 0 !important;
+  border-radius: 2px 2px 0 0;
+  overflow: hidden;
+}
+.poster-img {
+  border: 1px solid var(--bd);
+  border-bottom: none;
+  border-radius: 2px 2px 0 0;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+.poster-link:hover .poster-img {
+  opacity: 0.88;
+  filter: brightness(0.96);
+}
+.poster-placeholder {
+  border: 1px solid var(--bd);
+  border-bottom: none;
+  border-radius: 2px 2px 0 0;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: var(--s2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.95rem;
+  color: var(--tm);
+  line-height: 1.3;
+}
 div[data-testid="column"] div[data-testid="stImage"] img {
   border: 1px solid var(--bd);
   border-bottom: none;
@@ -197,17 +245,27 @@ div[data-testid="column"] div[data-testid="stImage"] img {
   margin-top: 0.5rem;
   font-size: 0.75rem;
   color: var(--tl);
+  flex-wrap: wrap;
 }
 .sug-pill {
   display: inline-block;
   background: var(--s2);
   border: 1px solid var(--bd);
   border-radius: 2px;
-  padding: 3px 10px;
-  font-size: 0.72rem;
+  padding: 4px 11px;
+  font-size: 0.73rem;
   color: var(--tm);
   cursor: pointer;
   letter-spacing: 0.2px;
+  text-decoration: none !important;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+}
+.sug-pill:hover {
+  background: var(--s3);
+  color: var(--th);
+  border-color: var(--bd2);
+  transform: translateY(-1px);
 }
 
 /* ==================================================
@@ -365,9 +423,12 @@ similarity  = pickle.load(open("similarity.pkl", "rb"))
 
 TMDB_KEY = "8265bd1679663a7ea12ac168da84d2e8"
 
-# Popular seed suggestions shown on empty state
-SEEDS = ["Inception", "The Dark Knight", "Interstellar", "Avengers: Infinity War",
-         "The Godfather", "Pulp Fiction", "Forrest Gump", "The Matrix", "Titanic"]
+# Popular seed suggestions shown on empty state (verified present in dataset)
+SEEDS = [
+    "Inception", "The Dark Knight", "Avatar", "The Avengers",
+    "Interstellar", "Fight Club", "The Matrix", "Pulp Fiction",
+    "The Shawshank Redemption", "Forrest Gump", "The Godfather", "Titanic"
+]
 
 
 def fetch_poster(movie_id):
@@ -430,10 +491,40 @@ def stars_html(s):
     return "".join(['<span class="on">\u2605</span>' if i < f else '\u2605' for i in range(5)])
 
 
-# Session state
+# Session state initialization
 for k, v in [("page","home"),("mid",None),("recs",[]),("src",None),("history",[]),("det_title","")]:
     if k not in st.session_state:
         st.session_state[k] = v
+
+# Synchronize with URL query parameters for browser navigation (Back / Forward buttons & deep linking)
+url_movie = st.query_params.get("movie") or st.query_params.get("id")
+url_src   = st.query_params.get("src")
+
+if url_movie:
+    try:
+        current_mid = int(url_movie)
+        st.session_state.mid = current_mid
+        st.session_state.page = "detail"
+        match = movies[movies["movie_id"] == current_mid]
+        if not match.empty:
+            st.session_state.det_title = match["title"].values[0]
+    except (ValueError, TypeError):
+        st.session_state.page = "home"
+        st.session_state.mid = None
+        if "movie" in st.query_params:
+            del st.query_params["movie"]
+else:
+    st.session_state.page = "home"
+    st.session_state.mid = None
+
+if url_src and url_src in movies["title"].values:
+    if st.session_state.src != url_src or not st.session_state.recs:
+        st.session_state.src = url_src
+        st.session_state.recs = recommend(url_src, n=10)
+elif not url_src and not url_movie:
+    # Navigated back to root: clear active recommendations to restore clean home state
+    st.session_state.recs = []
+    st.session_state.src = None
 
 
 # ================================================================
@@ -443,14 +534,15 @@ if st.session_state.page == "detail":
 
     # Navbar: brand | breadcrumb | back button
     nl, nc, nr = st.columns([2, 4, 1], gap="small")
+    home_query = f"?src={urllib.parse.quote(st.session_state.src)}" if st.session_state.src else "?"
     with nl:
-        st.markdown('<div class="dbar"><div class="d-brand">Cine<em>Mind</em></div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="dbar"><a href="{home_query}" target="_self" style="text-decoration:none;color:inherit;"><div class="d-brand">Cine<em>Mind</em></div></a></div>', unsafe_allow_html=True)
     with nc:
         cur = st.session_state.get("det_title", "Film")
         st.markdown(f"""
         <div style="padding:0.95rem 0 0.75rem;">
           <div class="d-crumb">
-            <span class="d-ch">Home</span>
+            <a href="{home_query}" target="_self" class="d-ch" style="text-decoration:none;cursor:pointer;">Home</a>
             <span class="d-cs">&#8250;</span>
             <span class="d-cc" title="{cur}">{cur}</span>
           </div>
@@ -458,12 +550,18 @@ if st.session_state.page == "detail":
     with nr:
         st.markdown('<div class="bwrap" style="padding-top:0.75rem;">', unsafe_allow_html=True)
         if st.button("\u2190 Back", key="back_btn"):
+            if "movie" in st.query_params:
+                del st.query_params["movie"]
+            if "id" in st.query_params:
+                del st.query_params["id"]
             if st.session_state.history:
                 prev = st.session_state.history.pop()
                 st.session_state.mid = prev["id"]
                 st.session_state.det_title = prev["title"]
+                st.query_params["movie"] = str(prev["id"])
             else:
                 st.session_state.page = "home"
+                st.session_state.mid = None
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -474,6 +572,14 @@ if st.session_state.page == "detail":
 
     if not det:
         st.error("Could not load film details.")
+        if st.button("\u2190 Back to Home", key="error_back_btn"):
+            if "movie" in st.query_params:
+                del st.query_params["movie"]
+            if "id" in st.query_params:
+                del st.query_params["id"]
+            st.session_state.page = "home"
+            st.session_state.mid = None
+            st.rerun()
         st.stop()
 
     if det["backdrop"]:
@@ -570,6 +676,36 @@ if st.session_state.page == "detail":
 # HOME PAGE
 # ================================================================
 
+# Helper to render a movie card with clickable poster & title button
+def render_movie_card(col, r, i):
+    with col:
+        src_str = f"&src={urllib.parse.quote(st.session_state.src)}" if st.session_state.src else ""
+        safe_title = r["title"].replace('"', '&quot;')
+        if r.get("poster"):
+            poster_markup = f"""
+            <a href="?movie={r['id']}{src_str}" target="_self" class="poster-link" title="{safe_title}"
+               onclick="const col = this.closest('div[data-testid=\\'column\\']'); const btn = col ? col.querySelector('.stButton button') : null; if(btn){{ btn.click(); return false; }}">
+              <img src="{r['poster']}" alt="{safe_title}" class="poster-img" />
+            </a>"""
+        else:
+            poster_markup = f"""
+            <a href="?movie={r['id']}{src_str}" target="_self" class="poster-link" title="{safe_title}"
+               onclick="const col = this.closest('div[data-testid=\\'column\\']'); const btn = col ? col.querySelector('.stButton button') : null; if(btn){{ btn.click(); return false; }}">
+              <div class="poster-placeholder"><span>{safe_title}</span></div>
+            </a>"""
+        st.markdown(poster_markup, unsafe_allow_html=True)
+
+        if st.button(r["title"], key=f"r{i}", use_container_width=True):
+            st.query_params["movie"] = str(r["id"])
+            if st.session_state.src:
+                st.query_params["src"] = st.session_state.src
+            st.session_state.history   = []
+            st.session_state.mid       = r["id"]
+            st.session_state.det_title = r["title"]
+            st.session_state.page      = "detail"
+            st.rerun()
+
+
 # Header — big brand, tagline, nav
 st.markdown("""
 <div class="hdr">
@@ -585,7 +721,9 @@ st.markdown("""
 st.markdown('<div class="slabel">Select a film you enjoy</div>', unsafe_allow_html=True)
 sc1, sc2 = st.columns([5, 1], gap="small")
 with sc1:
-    chosen = st.selectbox("film", movies["title"].values, label_visibility="collapsed")
+    titles_list = list(movies["title"].values)
+    sel_idx = titles_list.index(st.session_state.src) if st.session_state.src in titles_list else 0
+    chosen = st.selectbox("film", movies["title"].values, index=sel_idx, label_visibility="collapsed")
 with sc2:
     go = st.button("Discover", use_container_width=True)
 
@@ -593,6 +731,9 @@ if go:
     with st.spinner("Curating..."):
         st.session_state.recs = recommend(chosen, n=10)
         st.session_state.src  = chosen
+        st.query_params["src"] = chosen
+        if "movie" in st.query_params:
+            del st.query_params["movie"]
 
 # Results grid
 if st.session_state.recs:
@@ -605,45 +746,33 @@ if st.session_state.recs:
 
     # First row — 5 films
     row1 = st.columns(5, gap="small")
-    for i in range(5):
-        r = st.session_state.recs[i]
-        with row1[i]:
-            if r["poster"]:
-                st.image(r["poster"], use_container_width=True)
-            if st.button(r["title"], key=f"r{i}", use_container_width=True):
-                st.session_state.history   = []
-                st.session_state.mid       = r["id"]
-                st.session_state.det_title = r["title"]
-                st.session_state.page      = "detail"
-                st.rerun()
+    for i in range(min(5, len(st.session_state.recs))):
+        render_movie_card(row1[i], st.session_state.recs[i], i)
 
     # Second row — next 5 films
     if len(st.session_state.recs) > 5:
         st.markdown('<div style="height:0.6rem;"></div>', unsafe_allow_html=True)
         row2 = st.columns(5, gap="small")
-        for i in range(5, 10):
-            if i < len(st.session_state.recs):
-                r = st.session_state.recs[i]
-                with row2[i - 5]:
-                    if r["poster"]:
-                        st.image(r["poster"], use_container_width=True)
-                    if st.button(r["title"], key=f"r{i}", use_container_width=True):
-                        st.session_state.history   = []
-                        st.session_state.mid       = r["id"]
-                        st.session_state.det_title = r["title"]
-                        st.session_state.page      = "detail"
-                        st.rerun()
+        for i in range(5, min(10, len(st.session_state.recs))):
+            render_movie_card(row2[i - 5], st.session_state.recs[i], i)
 else:
-    # Pick 4 random seeds from available movies
+    # Pick 4 random seeds guaranteed to be present in the database
     avail = [s for s in SEEDS if s in movies["title"].values]
-    picks = random.sample(avail, min(4, len(avail)))
-    pills = "".join(f'<span class="sug-pill">{p}</span>' for p in picks)
+    picks = random.sample(avail, min(4, len(avail))) if avail else []
+    pills = []
+    for p in picks:
+        m_row = movies[movies["title"] == p]
+        if not m_row.empty:
+            mid_val = int(m_row["movie_id"].values[0])
+            safe_p = p.replace('"', '&quot;')
+            pills.append(f'<a href="?movie={mid_val}" target="_self" class="sug-pill" title="View details for {safe_p}">{p}</a>')
+    pills_html = "".join(pills)
 
     st.markdown(f"""
     <div class="empty">
       <div class="empty-h">Select a film and click Discover</div>
       <div class="empty-p">You'll get 10 personalised recommendations. Click any to see cast, crew, rating &amp; trailer.</div>
       <div class="sug-row" style="justify-content:center;margin-top:1rem;">
-        <span>Try:</span>{pills}
+        <span>Try:</span>{pills_html}
       </div>
     </div>""", unsafe_allow_html=True)
