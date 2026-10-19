@@ -5,7 +5,6 @@ import gdown
 import pandas as pd
 import requests
 import streamlit as st
-import streamlit.components.v1 as components
 
 st.set_page_config(page_title="CineMind", page_icon="C", layout="wide")
 
@@ -168,7 +167,6 @@ div[data-testid="column"] .stButton > button:hover {
 /* ── POSTER & CARD STYLES ── */
 div[data-testid="column"] div[data-testid="stImage"] {
   margin-bottom: 0 !important;
-  cursor: pointer !important;
 }
 div[data-testid="column"] div[data-testid="stImage"] img {
   border: 1px solid var(--bd) !important;
@@ -178,7 +176,6 @@ div[data-testid="column"] div[data-testid="stImage"] img {
   aspect-ratio: 2 / 3 !important;
   object-fit: cover !important;
   display: block !important;
-  cursor: pointer !important;
   transition: opacity 0.15s ease, filter 0.15s ease !important;
 }
 .poster-placeholder {
@@ -197,18 +194,65 @@ div[data-testid="column"] div[data-testid="stImage"] img {
   font-size: 0.95rem;
   color: var(--tm);
   line-height: 1.3;
-  cursor: pointer;
 }
 
-/* CARD HOVER STYLES */
-div[data-testid="column"]:has(div[data-testid="stImage"]) div[data-testid="stImage"] img {
+/* ── FULL-CARD CLICKABLE OVERLAY (POSTER + TITLE) ── */
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton),
+div[data-testid="column"]:has(.poster-placeholder):has(.stButton) {
+  position: relative !important;
   cursor: pointer !important;
 }
-div[data-testid="column"]:has(div[data-testid="stImage"]):hover div[data-testid="stImage"] img {
+
+/* Pass pointer events through the poster image so clicks register on the button overlay */
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) div[data-testid="stImage"],
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) div[data-testid="stImage"] img,
+div[data-testid="column"]:has(.poster-placeholder):has(.stButton) .poster-placeholder {
+  pointer-events: none !important;
+}
+
+/* Ensure intermediate wrapper elements are static so button::before spans the whole card */
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) > div,
+div[data-testid="column"]:has(.poster-placeholder):has(.stButton) > div,
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) [data-testid="stVerticalBlock"],
+div[data-testid="column"]:has(.poster-placeholder):has(.stButton) [data-testid="stVerticalBlock"],
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) [data-testid="stVerticalBlockBorderWrapper"],
+div[data-testid="column"]:has(.poster-placeholder):has(.stButton) [data-testid="stVerticalBlockBorderWrapper"],
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) .stButton,
+div[data-testid="column"]:has(.poster-placeholder):has(.stButton) .stButton {
+  position: static !important;
+}
+
+/* Button static position with visible overflow */
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) .stButton > button,
+div[data-testid="column"]:has(.poster-placeholder):has(.stButton) .stButton > button {
+  position: static !important;
+  overflow: visible !important;
+}
+
+/* Transparent button pseudo-element covering the entire movie card (poster + title) */
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) .stButton > button::before,
+div[data-testid="column"]:has(.poster-placeholder):has(.stButton) .stButton > button::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
+  background: transparent !important;
+  pointer-events: auto !important;
+}
+
+/* Card Hover Feedback */
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton):hover div[data-testid="stImage"] img {
   opacity: 0.88 !important;
   filter: brightness(0.96) !important;
 }
-div[data-testid="column"]:has(div[data-testid="stImage"]):hover .stButton > button {
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton):hover .stButton > button,
+div[data-testid="column"]:has(.poster-placeholder):has(.stButton):hover .stButton > button {
   background: var(--s3) !important;
   color: var(--th) !important;
   border-color: var(--bd2) !important;
@@ -230,17 +274,6 @@ div[data-testid="column"]:has(div[data-testid="stImage"]):hover .stButton > butt
   margin-bottom: 0.35rem;
 }
 .empty-p { font-size: 0.8rem; color: var(--tl); line-height: 1.7; }
-
-/* Invisible helper component iframe */
-div[data-testid="stCustomComponentV1"] {
-  height: 0 !important;
-  min-height: 0 !important;
-  max-height: 0 !important;
-  opacity: 0 !important;
-  position: absolute !important;
-  pointer-events: none !important;
-  overflow: hidden !important;
-}
 
 /* ==================================================
    DETAIL PAGE
@@ -732,36 +765,6 @@ if st.session_state.recs:
         row2 = st.columns(5, gap="small")
         for i in range(5, min(10, len(st.session_state.recs))):
             render_movie_card(row2[i - 5], st.session_state.recs[i], i)
-
-    # Helper component to catch clicks directly on poster images and route to the movie button
-    components.html("""
-    <script>
-    (function() {
-      function attachPosterClicks() {
-        try {
-          const pDoc = window.parent.document;
-          if (!pDoc) return;
-          const cols = pDoc.querySelectorAll('div[data-testid="column"]');
-          cols.forEach(function(col) {
-            const img = col.querySelector('img') || col.querySelector('.poster-placeholder');
-            const btn = col.querySelector('.stButton button');
-            if (img && btn && !img._cineClickBound) {
-              img._cineClickBound = true;
-              img.style.cursor = 'pointer';
-              img.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                btn.click();
-              });
-            }
-          });
-        } catch(err) {}
-      }
-      attachPosterClicks();
-      setInterval(attachPosterClicks, 250);
-    })();
-    </script>
-    """, height=0, width=0)
 else:
     st.markdown("""
     <div class="empty">
