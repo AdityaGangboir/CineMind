@@ -35,8 +35,9 @@ html, body, [class*="css"], .stApp {
 }
 #MainMenu, footer, header { visibility: hidden; }
 .block-container {
-  padding: 0 3rem 4rem !important;
+  padding: 0 2.5rem 3rem !important;
   max-width: 1320px !important;
+  margin-top: -3rem !important;
 }
 * { box-sizing: border-box; }
 ::-webkit-scrollbar { width: 5px; }
@@ -124,39 +125,39 @@ html, body, [class*="css"], .stApp {
 
 /* ── HERO ── */
 .hero {
-  padding: 5rem 0 3.5rem;
+  padding: 2rem 0 1.6rem;
   text-align: center;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 3rem;
+  margin-bottom: 1.5rem;
 }
 .hero-eyebrow {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 500;
   letter-spacing: 4px;
   text-transform: uppercase;
   color: var(--text-l);
-  margin-bottom: 1.2rem;
+  margin-bottom: 0.6rem;
 }
 .hero-title {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 5.2rem;
+  font-size: 3.6rem;
   font-weight: 300;
   color: var(--text-h);
   line-height: 1.05;
-  letter-spacing: -2px;
-  margin-bottom: 1.4rem;
+  letter-spacing: -1.5px;
+  margin-bottom: 0.8rem;
 }
 .hero-title em {
   font-style: italic;
   font-weight: 300;
 }
 .hero-sub {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   color: var(--text-m);
   font-weight: 400;
-  max-width: 420px;
+  max-width: 400px;
   margin: 0 auto;
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
 /* ── SEARCH PANEL ── */
@@ -164,8 +165,8 @@ html, body, [class*="css"], .stApp {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 2.2rem 2.5rem 2rem;
-  margin-bottom: 3rem;
+  padding: 1.2rem 1.8rem 1rem;
+  margin-bottom: 1.4rem;
 }
 .panel-label {
   font-size: 0.66rem;
@@ -173,7 +174,7 @@ html, body, [class*="css"], .stApp {
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--text-l);
-  margin-bottom: 1rem;
+  margin-bottom: 0.7rem;
 }
 
 /* ── STREAMLIT WIDGETS ── */
@@ -241,7 +242,7 @@ div[data-testid="column"] .stButton > button:hover {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 1.8rem;
+  margin-bottom: 1rem;
 }
 .sec-head-line {
   flex: 1;
@@ -339,7 +340,7 @@ div[data-testid="column"] .stButton > button:hover {
 /* Hero strip */
 .detail-hero {
   position: relative;
-  height: 480px;
+  height: 340px;
   overflow: hidden;
   margin-bottom: 0;
   background: var(--surface2);
@@ -366,11 +367,11 @@ div[data-testid="column"] .stButton > button:hover {
 .detail-hero-text {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  padding: 0 3rem 2.8rem;
+  padding: 0 2.5rem 1.8rem;
 }
 .detail-title-hero {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 3.8rem;
+  font-size: 3rem;
   font-weight: 500;
   color: var(--surface);
   line-height: 1.1;
@@ -386,34 +387,33 @@ div[data-testid="column"] .stButton > button:hover {
   color: rgba(255,255,255,0.78);
 }
 
-/* No backdrop fallback */
 .detail-title-fallback {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 3.2rem;
+  font-size: 2.6rem;
   font-weight: 500;
   color: var(--text-h);
   line-height: 1.1;
   letter-spacing: -1px;
-  margin-bottom: 0.5rem;
-  padding-top: 2.5rem;
+  margin-bottom: 0.4rem;
+  padding-top: 1.5rem;
 }
 .detail-tagline-fallback {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-style: italic;
   color: var(--text-m);
-  margin-bottom: 2rem;
+  margin-bottom: 1.2rem;
 }
 
 /* Meta strip */
 .meta-strip {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
   align-items: center;
   flex-wrap: wrap;
-  padding: 1.4rem 0;
+  padding: 0.9rem 0;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
 }
 .meta-item {
   text-align: left;
