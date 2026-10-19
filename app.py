@@ -1,4 +1,4 @@
-﻿import os
+import os
 import gdown
 import requests
 import streamlit as st
@@ -48,7 +48,7 @@ html, body, [class*="css"], .stApp {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.6rem 0 1.2rem;
+  padding: 1.4rem 0 1.2rem;
   border-bottom: 1px solid var(--border);
   margin-bottom: 0;
 }
@@ -58,6 +58,7 @@ html, body, [class*="css"], .stApp {
   font-weight: 600;
   color: var(--text-h);
   letter-spacing: 0.5px;
+  text-decoration: none;
 }
 .brand em {
   font-style: italic;
@@ -70,6 +71,55 @@ html, body, [class*="css"], .stApp {
   letter-spacing: 1.8px;
   text-transform: uppercase;
   color: var(--text-l);
+}
+
+/* ── BREADCRUMB ── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-l);
+  letter-spacing: 0.3px;
+}
+.breadcrumb a, .breadcrumb span { text-decoration: none; }
+.breadcrumb .bc-home {
+  color: var(--text-m);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.breadcrumb .bc-home:hover { color: var(--text-h); }
+.breadcrumb .bc-sep { color: var(--text-xl); font-size: 0.7rem; }
+.breadcrumb .bc-cur { color: var(--text-h); font-weight: 500; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── BACK BUTTON (nav style — overrides primary) ── */
+.nav-back-wrap > div > div > button,
+.nav-back-wrap .stButton > button {
+  background: transparent !important;
+  color: var(--text-m) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 3px !important;
+  padding: 0.38rem 1rem !important;
+  font-size: 0.78rem !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: none !important;
+  width: auto !important;
+  min-width: unset !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+.nav-back-wrap > div > div > button:hover,
+.nav-back-wrap .stButton > button:hover {
+  background: var(--surface2) !important;
+  color: var(--text-h) !important;
+  border-color: var(--border2) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* ── HERO ── */
@@ -636,7 +686,7 @@ def stars_html(s):
 
 
 # ── Session ──
-for k, v in [("page","home"),("mid",None),("recs",[]),("src",None)]:
+for k, v in [("page","home"),("mid",None),("recs",[]),("src",None),("history",[]),("det_title","")]:
     if k not in st.session_state: st.session_state[k] = v
 
 
@@ -645,12 +695,47 @@ for k, v in [("page","home"),("mid",None),("recs",[]),("src",None)]:
 # ================================================================
 if st.session_state.page == "detail":
 
-    # Nav
-    c_back, _ = st.columns([1, 5])
-    with c_back:
-        if st.button("\u2190  All recommendations"):
-            st.session_state.page = "home"
-            st.rerun()
+    # ── Persistent top nav bar ──
+    nav_l, nav_c, nav_r = st.columns([2, 3, 2], gap="small")
+
+    with nav_l:
+        # Brand always goes home
+        st.markdown("""
+        <div class="topbar" style="border-bottom:none;padding:1rem 0 0.8rem;">
+          <div class="brand">Cine<em>Mind</em></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with nav_c:
+        # Breadcrumb: Home > Film Title
+        cur_title = st.session_state.get("det_title", "Film")
+        st.markdown(f"""
+        <div style="padding:1.05rem 0 0.8rem;">
+          <div class="breadcrumb">
+            <span class="bc-home" id="bc-home-link">Home</span>
+            <span class="bc-sep">&#8250;</span>
+            <span class="bc-cur" title="{cur_title}">{cur_title}</span>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with nav_r:
+        # Back button — right-aligned, ghost style
+        st.markdown('<div class="nav-back-wrap" style="display:flex;justify-content:flex-end;padding-top:0.85rem;">', unsafe_allow_html=True)
+        back_col, _ = st.columns([1, 0.01])
+        with back_col:
+            if st.button("\u2190 Back", key="nav_back_btn"):
+                if st.session_state.history:
+                    # Pop back to the previous film
+                    prev = st.session_state.history.pop()
+                    st.session_state.mid = prev["id"]
+                    st.session_state.det_title = prev["title"]
+                else:
+                    st.session_state.page = "home"
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<hr style="margin:0;border:none;border-top:1px solid var(--border);">', unsafe_allow_html=True)
 
     with st.spinner("Loading..."):
         det = fetch_details(st.session_state.mid)
@@ -842,8 +927,10 @@ if st.session_state.recs:
             if r["poster"]:
                 st.image(r["poster"], use_container_width=True)
             if st.button(r["title"], key=f"r{i}", use_container_width=True):
-                st.session_state.mid  = r["id"]
-                st.session_state.page = "detail"
+                st.session_state.history   = []        # fresh history for home→detail
+                st.session_state.mid       = r["id"]
+                st.session_state.det_title = r["title"]
+                st.session_state.page      = "detail"
                 st.rerun()
 else:
     st.markdown("""
