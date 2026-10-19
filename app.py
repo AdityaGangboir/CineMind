@@ -196,67 +196,6 @@ div[data-testid="column"] div[data-testid="stImage"] img {
   line-height: 1.3;
 }
 
-/* ── FULL-CARD CLICKABLE OVERLAY (POSTER + TITLE) ── */
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton),
-div[data-testid="column"]:has(.poster-placeholder):has(.stButton) {
-  position: relative !important;
-  cursor: pointer !important;
-}
-
-/* Pass pointer events through the poster image so clicks register on the button overlay */
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) div[data-testid="stImage"],
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) div[data-testid="stImage"] img,
-div[data-testid="column"]:has(.poster-placeholder):has(.stButton) .poster-placeholder {
-  pointer-events: none !important;
-}
-
-/* Ensure intermediate wrapper elements are static so button::before spans the whole card */
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) > div,
-div[data-testid="column"]:has(.poster-placeholder):has(.stButton) > div,
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) [data-testid="stVerticalBlock"],
-div[data-testid="column"]:has(.poster-placeholder):has(.stButton) [data-testid="stVerticalBlock"],
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) [data-testid="stVerticalBlockBorderWrapper"],
-div[data-testid="column"]:has(.poster-placeholder):has(.stButton) [data-testid="stVerticalBlockBorderWrapper"],
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) .stButton,
-div[data-testid="column"]:has(.poster-placeholder):has(.stButton) .stButton {
-  position: static !important;
-}
-
-/* Button static position with visible overflow */
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) .stButton > button,
-div[data-testid="column"]:has(.poster-placeholder):has(.stButton) .stButton > button {
-  position: static !important;
-  overflow: visible !important;
-}
-
-/* Transparent button pseudo-element covering the entire movie card (poster + title) */
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) .stButton > button::before,
-div[data-testid="column"]:has(.poster-placeholder):has(.stButton) .stButton > button::before {
-  content: "" !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  cursor: pointer !important;
-  z-index: 10 !important;
-  background: transparent !important;
-  pointer-events: auto !important;
-}
-
-/* Card Hover Feedback */
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton):hover div[data-testid="stImage"] img {
-  opacity: 0.88 !important;
-  filter: brightness(0.96) !important;
-}
-div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton):hover .stButton > button,
-div[data-testid="column"]:has(.poster-placeholder):has(.stButton):hover .stButton > button {
-  background: var(--s3) !important;
-  color: var(--th) !important;
-  border-color: var(--bd2) !important;
-}
 
 /* ── EMPTY STATE ── */
 .empty {
