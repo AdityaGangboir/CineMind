@@ -5,436 +5,560 @@ import streamlit as st
 import pickle
 import pandas as pd
 
-# === Page Config ===
-st.set_page_config(
-    page_title="CineMind - Movie Recommender",
-    page_icon="🎬",
-    layout="wide",
-)
+st.set_page_config(page_title="CineMind", page_icon="C", layout="wide")
 
-# === CSS ===
-st.markdown("""
+CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=DM+Sans:wght@300;400;500;600&display=swap');
 
-/* ── Reset & Base ── */
+/* ── TOKENS ── */
+:root {
+  --bg:        #faf7f2;
+  --surface:   #ffffff;
+  --surface2:  #f5f1ea;
+  --border:    #e8e1d5;
+  --border2:   #d8cfc1;
+  --text-h:    #1c1712;
+  --text-b:    #3d3529;
+  --text-m:    #6b6054;
+  --text-l:    #9c9085;
+  --text-xl:   #bdb4a8;
+  --beige:     #e8e0d0;
+  --beige2:    #f0ead8;
+}
+
+/* ── BASE ── */
 html, body, [class*="css"], .stApp {
-    font-family: 'Inter', sans-serif;
-    background-color: #f7f3ee !important;
-    color: #1a1208;
+  font-family: 'DM Sans', sans-serif;
+  background-color: var(--bg) !important;
+  color: var(--text-b);
 }
-
-/* ── Streamlit chrome ── */
 #MainMenu, footer, header { visibility: hidden; }
-.block-container { padding: 2rem 3rem 4rem 3rem !important; max-width: 1280px !important; }
+.block-container {
+  padding: 0 3rem 4rem !important;
+  max-width: 1320px !important;
+}
+* { box-sizing: border-box; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--surface2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #ede8e0; }
-::-webkit-scrollbar-thumb { background: #c8b89a; border-radius: 3px; }
-
-/* ── HOME: Hero ── */
-.home-hero {
-    text-align: center;
-    padding: 3.5rem 1rem 2.5rem;
+/* ── NAV BAR ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.6rem 0 1.2rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
 }
-.home-logo {
-    font-family: 'Playfair Display', serif;
-    font-size: 3.6rem;
-    font-weight: 700;
-    color: #1a1208;
-    letter-spacing: -1.5px;
-    line-height: 1;
-    margin-bottom: 0.4rem;
+.brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: var(--text-h);
+  letter-spacing: 0.5px;
 }
-.home-logo span {
-    color: #b08d57;
+.brand em {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--text-m);
 }
-.home-tagline {
-    font-size: 1rem;
-    color: #8a7a65;
-    font-weight: 400;
-    letter-spacing: 0.5px;
-    margin-bottom: 0;
-}
-
-/* ── Divider ── */
-.elegant-divider {
-    border: none;
-    height: 1px;
-    background: linear-gradient(to right, transparent, #d4c5ae, transparent);
-    margin: 1.5rem 0;
+.nav-links {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--text-l);
 }
 
-/* ── Search bar container ── */
-.search-wrap {
-    background: #ffffff;
-    border: 1px solid #e4dace;
-    border-radius: 16px;
-    padding: 1.5rem 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 2px 20px rgba(176,141,87,0.07);
+/* ── HERO ── */
+.hero {
+  padding: 5rem 0 3.5rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3rem;
+}
+.hero-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--text-l);
+  margin-bottom: 1.2rem;
+}
+.hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 5.2rem;
+  font-weight: 300;
+  color: var(--text-h);
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 1.4rem;
+}
+.hero-title em {
+  font-style: italic;
+  font-weight: 300;
+}
+.hero-sub {
+  font-size: 0.92rem;
+  color: var(--text-m);
+  font-weight: 400;
+  max-width: 420px;
+  margin: 0 auto;
+  line-height: 1.7;
 }
 
-/* ── Selectbox ── */
+/* ── SEARCH PANEL ── */
+.search-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2.2rem 2.5rem 2rem;
+  margin-bottom: 3rem;
+}
+.panel-label {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-l);
+  margin-bottom: 1rem;
+}
+
+/* ── STREAMLIT WIDGETS ── */
 .stSelectbox label { display: none !important; }
-.stSelectbox > div > div {
-    background: #faf8f4 !important;
-    border: 1.5px solid #d4c5ae !important;
-    border-radius: 10px !important;
-    color: #1a1208 !important;
-    font-size: 0.97rem !important;
-    box-shadow: none !important;
-    transition: border-color 0.2s ease !important;
-}
-.stSelectbox > div > div:hover {
-    border-color: #b08d57 !important;
-}
+.stSelectbox > div > div,
 div[data-baseweb="select"] > div {
-    background: #faf8f4 !important;
-    border-color: #d4c5ae !important;
+  background: var(--surface2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 3px !important;
+  color: var(--text-b) !important;
+  font-size: 0.92rem !important;
+  box-shadow: none !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+.stSelectbox > div > div:focus-within {
+  border-color: var(--border2) !important;
+  box-shadow: 0 0 0 3px rgba(100,90,75,0.08) !important;
 }
 
-/* ── Primary button ── */
+/* PRIMARY BUTTON */
 .stButton > button {
-    background: #1a1208 !important;
-    color: #f7f0e6 !important;
-    border: none !important;
-    border-radius: 10px !important;
-    padding: 0.65rem 2rem !important;
-    font-weight: 500 !important;
-    font-size: 0.93rem !important;
-    letter-spacing: 0.4px !important;
-    transition: all 0.25s ease !important;
-    width: 100% !important;
-    font-family: 'Inter', sans-serif !important;
+  background: var(--text-h) !important;
+  color: var(--beige2) !important;
+  border: 1px solid var(--text-h) !important;
+  border-radius: 3px !important;
+  padding: 0.7rem 1.8rem !important;
+  font-weight: 500 !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  transition: all 0.22s ease !important;
+  width: 100% !important;
+  font-family: 'DM Sans', sans-serif !important;
+  cursor: pointer !important;
 }
 .stButton > button:hover {
-    background: #b08d57 !important;
-    color: #ffffff !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 6px 20px rgba(176,141,87,0.3) !important;
-}
-.stButton > button:active {
-    transform: translateY(0px) !important;
+  background: var(--text-b) !important;
+  border-color: var(--text-b) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
-/* ── Section label ── */
-.section-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    color: #b08d57;
-    margin: 2rem 0 1rem;
-}
-
-/* ── Movie cards ── */
-.movie-card {
-    background: #ffffff;
-    border: 1px solid #ede6da;
-    border-radius: 14px;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    position: relative;
-    cursor: pointer;
-}
-.movie-card:hover {
-    border-color: #b08d57;
-    box-shadow: 0 10px 40px rgba(176,141,87,0.18);
-    transform: translateY(-5px);
-}
-.movie-card img {
-    width: 100%;
-    display: block;
-    border-radius: 13px 13px 0 0;
-}
-.movie-card-body {
-    padding: 10px 12px 12px;
-}
-.movie-card-title {
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #1a1208;
-    line-height: 1.35;
-    text-align: center;
-}
-
-/* ── Movie card click button override ── */
+/* CARD BUTTON (columns) */
 div[data-testid="column"] .stButton > button {
-    background: transparent !important;
-    color: #1a1208 !important;
-    border: 1px solid #e4dace !important;
-    border-radius: 0 0 14px 14px !important;
-    font-size: 0.8rem !important;
-    font-weight: 500 !important;
-    padding: 0.5rem 0.75rem !important;
-    letter-spacing: 0.2px !important;
-    text-align: center !important;
-    margin-top: 0 !important;
-    transition: all 0.2s ease !important;
+  background: transparent !important;
+  color: var(--text-b) !important;
+  border: 1px solid var(--border) !important;
+  border-top: none !important;
+  border-radius: 0 0 3px 3px !important;
+  font-size: 0.76rem !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.3px !important;
+  text-transform: none !important;
+  padding: 0.55rem 0.5rem !important;
+  transition: all 0.18s ease !important;
 }
 div[data-testid="column"] .stButton > button:hover {
-    background: #1a1208 !important;
-    color: #f7f0e6 !important;
-    border-color: #1a1208 !important;
-    transform: none !important;
-    box-shadow: none !important;
+  background: var(--surface2) !important;
+  color: var(--text-h) !important;
+  border-color: var(--border2) !important;
 }
 
-/* ── Empty state ── */
-.empty-state {
-    text-align: center;
-    padding: 5rem 2rem;
-    background: #ffffff;
-    border: 1px dashed #d4c5ae;
-    border-radius: 20px;
-    margin-top: 1rem;
-    color: #b0a090;
+/* ── SECTION HEADER ── */
+.sec-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
 }
-.empty-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    opacity: 0.6;
+.sec-head-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
-.empty-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.3rem;
-    color: #6b5d4f;
-    margin-bottom: 0.5rem;
-}
-.empty-sub {
-    font-size: 0.88rem;
-    color: #b0a090;
+.sec-head-text {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-l);
+  white-space: nowrap;
 }
 
-/* ── Because you liked ── */
-.because-label {
-    font-size: 0.92rem;
-    color: #8a7a65;
-    margin: 0.5rem 0 1.5rem;
+/* ── FILM CARD ── */
+.film-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+  height: 100%;
 }
-.because-label strong {
-    color: #1a1208;
-    font-weight: 600;
+.film-card:hover {
+  box-shadow: 0 4px 24px rgba(28,23,18,0.08);
+  border-color: var(--border2);
 }
-
-/* ── DETAIL PAGE ── */
-
-/* Back button */
-.stButton.back-btn-wrap > button {
-    background: transparent !important;
-    color: #8a7a65 !important;
-    border: 1px solid #e4dace !important;
-    border-radius: 8px !important;
-    font-size: 0.82rem !important;
-    padding: 0.4rem 1rem !important;
-    width: auto !important;
-    font-weight: 400 !important;
-    letter-spacing: 0 !important;
+.film-card img { width: 100%; display: block; }
+.film-card-info {
+  padding: 10px 10px 0;
 }
-.stButton.back-btn-wrap > button:hover {
-    background: #1a1208 !important;
-    color: #f7f0e6 !important;
-    border-color: #1a1208 !important;
-    transform: none !important;
-    box-shadow: none !important;
+.film-card-title {
+  font-size: 0.79rem;
+  font-weight: 500;
+  color: var(--text-b);
+  line-height: 1.4;
+  text-align: center;
 }
 
-/* Backdrop */
-.backdrop-hero {
-    width: 100%;
-    height: 380px;
-    border-radius: 20px;
-    overflow: hidden;
-    position: relative;
-    margin-bottom: 2rem;
-    background-color: #e8e0d5;
+/* ── EMPTY STATE ── */
+.empty {
+  text-align: center;
+  padding: 6rem 2rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
 }
-.backdrop-hero-img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0.55;
-    filter: sepia(20%) saturate(80%);
+.empty-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 5rem;
+  font-weight: 300;
+  color: var(--beige);
+  line-height: 1;
+  margin-bottom: 0.5rem;
 }
-.backdrop-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        to bottom,
-        rgba(247,243,238,0.1) 0%,
-        rgba(247,243,238,0.05) 40%,
-        rgba(26,18,8,0.75) 100%
-    );
+.empty-h {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: var(--text-m);
+  margin-bottom: 0.5rem;
 }
-.backdrop-content {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 2rem 2.5rem;
-}
-.backdrop-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 2.6rem;
-    font-weight: 700;
-    color: #faf6f0;
-    line-height: 1.15;
-    margin-bottom: 0.35rem;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-}
-.backdrop-tagline {
-    font-size: 0.95rem;
-    color: #d4c5ae;
-    font-style: italic;
-    font-weight: 300;
+.empty-p {
+  font-size: 0.84rem;
+  color: var(--text-l);
+  line-height: 1.7;
 }
 
-/* Stat card */
-.stat-card {
-    background: #ffffff;
-    border: 1px solid #ede6da;
-    border-radius: 12px;
-    padding: 14px 10px;
-    text-align: center;
-    margin-bottom: 10px;
+/* ── FOR label ── */
+.for-label {
+  font-size: 0.78rem;
+  color: var(--text-l);
+  margin-bottom: 1.8rem;
+  letter-spacing: 0.3px;
 }
-.stat-label {
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #b08d57;
-    margin-bottom: 4px;
+.for-label strong {
+  color: var(--text-h);
+  font-weight: 600;
 }
-.stat-value {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #1a1208;
-    line-height: 1.2;
+
+/* ================================================================
+   DETAIL PAGE
+   ================================================================ */
+
+/* Back nav */
+.detail-nav {
+  display: flex;
+  align-items: center;
+  padding: 1.2rem 0 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
 }
-.stat-sub {
-    font-size: 0.7rem;
-    color: #b0a090;
-    margin-top: 3px;
+
+/* Hero strip */
+.detail-hero {
+  position: relative;
+  height: 480px;
+  overflow: hidden;
+  margin-bottom: 0;
+  background: var(--surface2);
+}
+.detail-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(30%) brightness(0.65) sepia(15%);
+}
+.detail-hero-grad {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(250,247,242,0) 0%,
+    rgba(250,247,242,0) 30%,
+    rgba(250,247,242,0.6) 70%,
+    rgba(250,247,242,1) 100%
+  );
+}
+.detail-hero-text {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 0 3rem 2.8rem;
+}
+.detail-title-hero {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3.8rem;
+  font-weight: 500;
+  color: var(--surface);
+  line-height: 1.1;
+  letter-spacing: -1px;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 1px 20px rgba(0,0,0,0.35);
+}
+.detail-tagline-hero {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-style: italic;
+  font-weight: 300;
+  color: rgba(255,255,255,0.78);
+}
+
+/* No backdrop fallback */
+.detail-title-fallback {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3.2rem;
+  font-weight: 500;
+  color: var(--text-h);
+  line-height: 1.1;
+  letter-spacing: -1px;
+  margin-bottom: 0.5rem;
+  padding-top: 2.5rem;
+}
+.detail-tagline-fallback {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--text-m);
+  margin-bottom: 2rem;
+}
+
+/* Meta strip */
+.meta-strip {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 1.4rem 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2.5rem;
+}
+.meta-item {
+  text-align: left;
+}
+.meta-key {
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--text-l);
+  margin-bottom: 2px;
+}
+.meta-val {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--text-h);
+  line-height: 1;
+}
+.meta-divider {
+  width: 1px;
+  height: 30px;
+  background: var(--border);
+}
+
+/* Rating */
+.rating-block {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.rating-score {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-h);
+  line-height: 1;
+}
+.rating-denom {
+  font-size: 0.9rem;
+  color: var(--text-l);
+  font-weight: 300;
+}
+.rating-count {
+  font-size: 0.7rem;
+  color: var(--text-l);
+  margin-top: 2px;
 }
 
 /* Stars */
-.star-filled { color: #b08d57; }
-.star-empty  { color: #d4c5ae; }
+.stars-row {
+  font-size: 0.85rem;
+  color: var(--text-xl);
+  letter-spacing: 2px;
+}
+.stars-row .on { color: var(--text-m); }
 
-/* External link */
-.ext-link {
-    display: block;
-    text-align: center;
-    border-radius: 9px;
-    padding: 9px 12px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    text-decoration: none;
-    margin-top: 8px;
-    transition: all 0.2s ease;
-    letter-spacing: 0.3px;
-}
-.ext-link-imdb {
-    background: #f5c5181a;
-    border: 1px solid #f5c51866;
-    color: #8a6800;
-}
-.ext-link-imdb:hover { background: #f5c518; color: #1a1208; }
-.ext-link-web {
-    background: #e8e0d5;
-    border: 1px solid #d4c5ae;
-    color: #5a4a3a;
-}
-.ext-link-web:hover { background: #1a1208; color: #f7f0e6; border-color: #1a1208; }
-
-/* Section header (detail) */
-.detail-section {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    color: #b08d57;
-    margin: 2rem 0 0.75rem;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #ede6da;
+/* Detail section */
+.d-section {
+  font-size: 0.63rem;
+  font-weight: 500;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-l);
+  margin: 2.5rem 0 0.9rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
 
 /* Overview */
-.overview-text {
-    font-size: 0.97rem;
-    color: #4a3d2e;
-    line-height: 1.85;
-    font-weight: 400;
+.d-overview {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.13rem;
+  color: var(--text-b);
+  line-height: 1.85;
+  font-weight: 400;
 }
 
-/* Genre tag */
-.genre-tag {
-    display: inline-block;
-    background: #f0ebe2;
-    border: 1px solid #d4c5ae;
-    border-radius: 20px;
-    padding: 4px 14px;
-    font-size: 0.78rem;
-    color: #5a4a3a;
-    margin: 3px;
-    font-weight: 500;
-    letter-spacing: 0.2px;
+/* Genre pill */
+.g-pill {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 4px 13px;
+  font-size: 0.74rem;
+  color: var(--text-m);
+  margin: 2px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
 }
 
-/* People chip */
-.people-chip {
-    display: inline-block;
-    background: #faf8f4;
-    border: 1px solid #d4c5ae;
-    border-radius: 8px;
-    padding: 6px 14px;
-    font-size: 0.82rem;
-    color: #3a2e20;
-    margin: 3px;
-    font-weight: 500;
+/* People row */
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.person-row:last-child { border-bottom: none; }
+.person-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border2);
+  flex-shrink: 0;
+}
+.person-name { font-size: 0.88rem; font-weight: 500; color: var(--text-h); }
+.person-role { font-size: 0.76rem; color: var(--text-l); margin-left: auto; letter-spacing: 0.5px; }
+
+/* Cast grid card */
+.cast-c {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 14px 10px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.cast-c-name { font-size: 0.8rem; font-weight: 500; color: var(--text-h); margin-bottom: 3px; }
+.cast-c-char { font-family: 'Cormorant Garamond', serif; font-size: 0.82rem; color: var(--text-l); font-style: italic; }
+
+/* Ext links */
+.ext-a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-m);
+  background: var(--surface);
+  margin-top: 8px;
+  transition: all 0.18s ease;
+  letter-spacing: 0.5px;
+}
+.ext-a:hover {
+  background: var(--text-h);
+  color: var(--beige2);
+  border-color: var(--text-h);
 }
 
-/* Cast card */
-.cast-card {
-    background: #ffffff;
-    border: 1px solid #ede6da;
-    border-radius: 12px;
-    padding: 12px 8px;
-    text-align: center;
-    margin-bottom: 8px;
-    transition: border-color 0.2s ease;
+/* Finance strip */
+.fin-strip {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 12px;
 }
-.cast-card:hover { border-color: #b08d57; }
-.cast-name {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #1a1208;
-    margin-bottom: 2px;
+.fin-cell {
+  flex: 1;
+  padding: 12px;
+  text-align: center;
+  background: var(--surface);
 }
-.cast-char {
-    font-size: 0.71rem;
-    color: #8a7a65;
-    font-style: italic;
+.fin-cell + .fin-cell { border-left: 1px solid var(--border); }
+.fin-key {
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-l);
+  margin-bottom: 4px;
+}
+.fin-val {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--text-h);
 }
 
-/* Spinner */
-.stSpinner > div { border-top-color: #b08d57 !important; }
-
-/* Poster image border */
-.poster-wrap img {
-    border-radius: 14px;
-    border: 1px solid #e4dace;
-    box-shadow: 0 8px 30px rgba(26,18,8,0.12);
+/* Poster shadow */
+div[data-testid="stImage"] img {
+  border: 1px solid var(--border);
+  box-shadow: 4px 8px 32px rgba(28,23,18,0.1);
 }
+
+/* stVideo border */
+div[data-testid="stVideo"] {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+/* spinner */
+.stSpinner > div { border-top-color: var(--text-m) !important; }
 </style>
-""", unsafe_allow_html=True)
+"""
+st.markdown(CSS, unsafe_allow_html=True)
 
 # === Google Drive file URLs ===
 movies_dict_url = "https://drive.google.com/uc?id=1CishRUVNw4h--ffoIblUfpg-p1F5m57c"
@@ -445,269 +569,287 @@ if not os.path.exists("movies_dict.pkl"):
 if not os.path.exists("similarity.pkl"):
     gdown.download(similarity_url, "similarity.pkl", quiet=False)
 
-movies_dict = pickle.load(open('movies_dict.pkl', 'rb'))
+movies_dict = pickle.load(open("movies_dict.pkl", "rb"))
 movies      = pd.DataFrame(movies_dict)
-similarity  = pickle.load(open('similarity.pkl', 'rb'))
+similarity  = pickle.load(open("similarity.pkl", "rb"))
 
-TMDB_API_KEY = "8265bd1679663a7ea12ac168da84d2e8"
+TMDB_KEY = "8265bd1679663a7ea12ac168da84d2e8"
 
 
 def fetch_poster(movie_id):
     try:
-        url  = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US"
-        data = requests.get(url, timeout=8).json()
-        pp   = data.get('poster_path')
-        return f"https://image.tmdb.org/t/p/w500/{pp}" if pp else ""
+        r = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}", timeout=7).json()
+        p = r.get("poster_path")
+        return f"https://image.tmdb.org/t/p/w500/{p}" if p else ""
     except Exception:
         return ""
 
 
-def fetch_movie_details(movie_id):
+def fetch_details(movie_id):
     try:
-        d   = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_API_KEY}&language=en-US", timeout=8).json()
-        cr  = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={TMDB_API_KEY}&language=en-US", timeout=8).json()
-        vid = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={TMDB_API_KEY}&language=en-US", timeout=8).json()
-
-        crew      = cr.get('crew', [])
-        directors = [m['name'] for m in crew if m.get('job') == 'Director']
-        writers   = [m['name'] for m in crew if m.get('job') in ('Screenplay', 'Writer', 'Story')][:3]
-        cast      = [(m['name'], m.get('character', '')) for m in cr.get('cast', [])[:8]]
-
-        trailer_key = next(
-            (v['key'] for v in vid.get('results', []) if v.get('site') == 'YouTube' and v.get('type') == 'Trailer'),
-            None
-        )
-
-        pp = d.get('poster_path', '')
-        bp = d.get('backdrop_path', '')
-
+        d   = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}&language=en-US", timeout=8).json()
+        cr  = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={TMDB_KEY}&language=en-US", timeout=8).json()
+        vid = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={TMDB_KEY}&language=en-US", timeout=8).json()
+        crew = cr.get("crew", [])
         return {
-            "title":             d.get('title', 'Unknown'),
-            "tagline":           d.get('tagline', ''),
-            "overview":          d.get('overview', 'No overview available.'),
-            "release_date":      d.get('release_date', 'N/A'),
-            "runtime":           d.get('runtime', 0),
-            "vote_average":      round(d.get('vote_average', 0), 1),
-            "vote_count":        d.get('vote_count', 0),
-            "budget":            d.get('budget', 0),
-            "revenue":           d.get('revenue', 0),
-            "original_language": d.get('original_language', 'N/A').upper(),
-            "status":            d.get('status', 'N/A'),
-            "genres":            [g['name'] for g in d.get('genres', [])],
-            "directors":         directors,
-            "writers":           writers,
-            "cast":              cast,
-            "poster_url":        f"https://image.tmdb.org/t/p/w500/{pp}" if pp else "",
-            "backdrop_url":      f"https://image.tmdb.org/t/p/w1280/{bp}" if bp else "",
-            "trailer_key":       trailer_key,
-            "homepage":          d.get('homepage', ''),
-            "imdb_id":           d.get('imdb_id', ''),
+            "title":      d.get("title", ""),
+            "tagline":    d.get("tagline", ""),
+            "overview":   d.get("overview", "No summary available."),
+            "release":    d.get("release_date", ""),
+            "runtime":    d.get("runtime", 0),
+            "rating":     round(d.get("vote_average", 0), 1),
+            "votes":      d.get("vote_count", 0),
+            "budget":     d.get("budget", 0),
+            "revenue":    d.get("revenue", 0),
+            "language":   d.get("original_language", "").upper(),
+            "status":     d.get("status", ""),
+            "genres":     [g["name"] for g in d.get("genres", [])],
+            "directors":  [m["name"] for m in crew if m.get("job") == "Director"],
+            "writers":    list(dict.fromkeys([m["name"] for m in crew if m.get("job") in ("Screenplay","Writer","Story")]))[:4],
+            "cast":       [(m["name"], m.get("character","")) for m in cr.get("cast",[])[:8]],
+            "poster":     f"https://image.tmdb.org/t/p/w500/{d['poster_path']}" if d.get("poster_path") else "",
+            "backdrop":   f"https://image.tmdb.org/t/p/w1280/{d['backdrop_path']}" if d.get("backdrop_path") else "",
+            "trailer":    next((v["key"] for v in vid.get("results",[]) if v.get("site")=="YouTube" and v.get("type")=="Trailer"), None),
+            "imdb_id":    d.get("imdb_id",""),
+            "homepage":   d.get("homepage",""),
         }
     except Exception:
         return None
 
 
-def recommend(movie):
-    idx       = movies[movies['title'] == movie].index[0]
-    distances = similarity[idx]
-    top5      = sorted(enumerate(distances), reverse=True, key=lambda x: x[1])[1:6]
-    return [
-        {"title": movies.iloc[i].title, "movie_id": movies.iloc[i].movie_id, "poster": fetch_poster(movies.iloc[i].movie_id)}
-        for i, _ in top5
-    ]
+def recommend(title):
+    idx = movies[movies["title"] == title].index[0]
+    top = sorted(enumerate(similarity[idx]), reverse=True, key=lambda x: x[1])[1:6]
+    return [{"title": movies.iloc[i].title, "id": movies.iloc[i].movie_id, "poster": fetch_poster(movies.iloc[i].movie_id)} for i,_ in top]
 
 
-def fmt_currency(val):
-    if val and val > 0:
-        if val >= 1_000_000_000: return f"${val/1_000_000_000:.2f}B"
-        if val >= 1_000_000:     return f"${val/1_000_000:.1f}M"
-        return f"${val:,}"
-    return "N/A"
+def money(v):
+    if not v or v == 0: return "—"
+    if v >= 1e9: return f"${v/1e9:.2f}B"
+    if v >= 1e6: return f"${v/1e6:.1f}M"
+    return f"${v:,}"
 
 
-def star_rating_html(score):
-    filled = round(score / 2)
-    stars  = '<span class="star-filled">' + "\u2605" * filled + '</span>'
-    stars += '<span class="star-empty">'  + "\u2605" * (5 - filled) + '</span>'
-    return stars
+def stars_html(s):
+    f = round(s / 2)
+    return "".join(['<span class="on">\u2605</span>' if i < f else '\u2605' for i in range(5)])
 
 
-# === Session State ===
-for key, default in [("page","home"),("selected_movie_id",None),("recommendations",[]),("source_movie",None)]:
-    if key not in st.session_state:
-        st.session_state[key] = default
+# ── Session ──
+for k, v in [("page","home"),("mid",None),("recs",[]),("src",None)]:
+    if k not in st.session_state: st.session_state[k] = v
 
 
-# ============================================================
+# ================================================================
 # DETAIL PAGE
-# ============================================================
+# ================================================================
 if st.session_state.page == "detail":
 
-    if st.button("\u2190  Back to recommendations"):
-        st.session_state.page = "home"
-        st.rerun()
+    # Nav
+    c_back, _ = st.columns([1, 5])
+    with c_back:
+        if st.button("\u2190  All recommendations"):
+            st.session_state.page = "home"
+            st.rerun()
 
-    with st.spinner("Fetching movie details..."):
-        det = fetch_movie_details(st.session_state.selected_movie_id)
+    with st.spinner("Loading..."):
+        det = fetch_details(st.session_state.mid)
 
     if not det:
-        st.error("Could not load movie details. Please go back and try again.")
+        st.error("Could not load film details.")
         st.stop()
 
-    # ── Backdrop ──
-    if det["backdrop_url"]:
+    # Hero backdrop
+    if det["backdrop"]:
         st.markdown(f"""
-        <div class="backdrop-hero">
-            <img class="backdrop-hero-img" src="{det['backdrop_url']}" />
-            <div class="backdrop-overlay"></div>
-            <div class="backdrop-content">
-                <div class="backdrop-title">{det['title']}</div>
-                <div class="backdrop-tagline">{det['tagline']}</div>
-            </div>
+        <div class="detail-hero">
+          <img class="detail-hero-img" src="{det['backdrop']}" />
+          <div class="detail-hero-grad"></div>
+          <div class="detail-hero-text">
+            <div class="detail-title-hero">{det['title']}</div>
+            <div class="detail-tagline-hero">{det['tagline']}</div>
+          </div>
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown(f"""
-        <div style="padding:2rem 0 1rem;">
-            <div class="backdrop-title" style="color:#1a1208;font-size:2.4rem;">{det['title']}</div>
-            <div class="backdrop-tagline" style="color:#8a7a65;">{det['tagline']}</div>
-        </div>
+        <div class="detail-title-fallback">{det['title']}</div>
+        <div class="detail-tagline-fallback">{det['tagline']}</div>
         """, unsafe_allow_html=True)
 
-    # ── Two columns ──
-    left, right = st.columns([1, 2.6], gap="large")
+    # Meta strip
+    year = det["release"][:4] if det["release"] else "—"
+    rh   = det["runtime"] // 60 if det["runtime"] else 0
+    rm   = det["runtime"] % 60  if det["runtime"] else 0
+    rt   = f"{rh}h {rm}m" if det["runtime"] else "—"
+    genres_inline = " / ".join(det["genres"][:3]) if det["genres"] else ""
 
-    with left:
-        if det["poster_url"]:
-            st.markdown('<div class="poster-wrap">', unsafe_allow_html=True)
-            st.image(det["poster_url"], use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        year = det["release_date"][:4] if det["release_date"] != "N/A" else "N/A"
-        rh   = det["runtime"] // 60 if det["runtime"] else 0
-        rm   = det["runtime"] % 60  if det["runtime"] else 0
-        rt   = f"{rh}h {rm}m" if det["runtime"] else "N/A"
-
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-label">Rating</div>
-            <div class="stat-value">{det['vote_average']} <span style="font-size:0.9rem;color:#8a7a65;">/ 10</span></div>
-            <div style="font-size:1rem;margin:3px 0;">{star_rating_html(det['vote_average'])}</div>
-            <div class="stat-sub">{det['vote_count']:,} ratings</div>
+    st.markdown(f"""
+    <div class="meta-strip">
+      <div class="meta-item">
+        <div class="meta-key">Score</div>
+        <div class="rating-block">
+          <span class="rating-score">{det['rating']}</span>
+          <span class="rating-denom">/10</span>
         </div>
-        """, unsafe_allow_html=True)
+        <div class="stars-row">{stars_html(det['rating'])}</div>
+        <div class="rating-count">{det['votes']:,} ratings</div>
+      </div>
+      <div class="meta-divider"></div>
+      <div class="meta-item">
+        <div class="meta-key">Year</div>
+        <div class="meta-val">{year}</div>
+      </div>
+      <div class="meta-divider"></div>
+      <div class="meta-item">
+        <div class="meta-key">Runtime</div>
+        <div class="meta-val">{rt}</div>
+      </div>
+      <div class="meta-divider"></div>
+      <div class="meta-item">
+        <div class="meta-key">Language</div>
+        <div class="meta-val">{det['language']}</div>
+      </div>
+      <div class="meta-divider"></div>
+      <div class="meta-item">
+        <div class="meta-key">Genre</div>
+        <div class="meta-val" style="font-size:1rem;">{genres_inline}</div>
+      </div>
+      <div class="meta-divider"></div>
+      <div class="meta-item">
+        <div class="meta-key">Status</div>
+        <div class="meta-val" style="font-size:1rem;">{det['status']}</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-        cols2 = st.columns(2)
-        with cols2[0]:
-            st.markdown(f'<div class="stat-card"><div class="stat-label">Year</div><div class="stat-value" style="font-size:1.15rem;">{year}</div></div>', unsafe_allow_html=True)
-        with cols2[1]:
-            st.markdown(f'<div class="stat-card"><div class="stat-label">Runtime</div><div class="stat-value" style="font-size:1.05rem;">{rt}</div></div>', unsafe_allow_html=True)
+    # Two-column layout
+    lc, rc = st.columns([1, 2.4], gap="large")
 
-        cols3 = st.columns(2)
-        with cols3[0]:
-            st.markdown(f'<div class="stat-card"><div class="stat-label">Language</div><div class="stat-value" style="font-size:1.1rem;">{det["original_language"]}</div></div>', unsafe_allow_html=True)
-        with cols3[1]:
-            st.markdown(f'<div class="stat-card"><div class="stat-label">Status</div><div class="stat-value" style="font-size:0.95rem;">{det["status"]}</div></div>', unsafe_allow_html=True)
+    with lc:
+        if det["poster"]:
+            st.image(det["poster"], use_container_width=True)
 
+        # Finance
         if det["budget"] or det["revenue"]:
-            cols4 = st.columns(2)
-            with cols4[0]:
-                st.markdown(f'<div class="stat-card"><div class="stat-label">Budget</div><div class="stat-value" style="font-size:1rem;">{fmt_currency(det["budget"])}</div></div>', unsafe_allow_html=True)
-            with cols4[1]:
-                st.markdown(f'<div class="stat-card"><div class="stat-label">Box Office</div><div class="stat-value" style="font-size:1rem;">{fmt_currency(det["revenue"])}</div></div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="fin-strip">
+              <div class="fin-cell">
+                <div class="fin-key">Budget</div>
+                <div class="fin-val">{money(det['budget'])}</div>
+              </div>
+              <div class="fin-cell">
+                <div class="fin-key">Box Office</div>
+                <div class="fin-val">{money(det['revenue'])}</div>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
 
+        # Links
         if det["imdb_id"]:
-            st.markdown(f'<a class="ext-link ext-link-imdb" href="https://www.imdb.com/title/{det["imdb_id"]}" target="_blank">&#9733; View on IMDb</a>', unsafe_allow_html=True)
+            st.markdown(f'<a class="ext-a" href="https://www.imdb.com/title/{det["imdb_id"]}" target="_blank"><span>&#9733;</span> View on IMDb</a>', unsafe_allow_html=True)
         if det["homepage"]:
-            st.markdown(f'<a class="ext-link ext-link-web" href="{det["homepage"]}" target="_blank">&#8599; Official Website</a>', unsafe_allow_html=True)
+            st.markdown(f'<a class="ext-a" href="{det["homepage"]}" target="_blank"><span>&#8594;</span> Official Site</a>', unsafe_allow_html=True)
 
-    with right:
+    with rc:
+        # Synopsis
+        st.markdown('<div class="d-section">Synopsis</div>', unsafe_allow_html=True)
+        st.markdown(f'<p class="d-overview">{det["overview"]}</p>', unsafe_allow_html=True)
 
+        # Genres (pills)
         if det["genres"]:
-            st.markdown('<div class="detail-section">Genres</div>', unsafe_allow_html=True)
-            st.markdown("".join([f'<span class="genre-tag">{g}</span>' for g in det["genres"]]), unsafe_allow_html=True)
+            st.markdown('<div class="d-section">Genres</div>', unsafe_allow_html=True)
+            st.markdown("".join(f'<span class="g-pill">{g}</span>' for g in det["genres"]), unsafe_allow_html=True)
 
-        st.markdown('<div class="detail-section">Synopsis</div>', unsafe_allow_html=True)
-        st.markdown(f'<p class="overview-text">{det["overview"]}</p>', unsafe_allow_html=True)
-
+        # Direction
         if det["directors"]:
-            st.markdown('<div class="detail-section">Direction</div>', unsafe_allow_html=True)
-            st.markdown("".join([f'<span class="people-chip">&#127909; &nbsp;{d}</span>' for d in det["directors"]]), unsafe_allow_html=True)
+            st.markdown('<div class="d-section">Direction</div>', unsafe_allow_html=True)
+            for name in det["directors"]:
+                st.markdown(f'<div class="person-row"><span class="person-dot"></span><span class="person-name">{name}</span><span class="person-role">Director</span></div>', unsafe_allow_html=True)
 
+        # Screenplay
         if det["writers"]:
-            st.markdown('<div class="detail-section">Screenplay</div>', unsafe_allow_html=True)
-            st.markdown("".join([f'<span class="people-chip">&#9999; &nbsp;{w}</span>' for w in det["writers"]]), unsafe_allow_html=True)
+            st.markdown('<div class="d-section">Screenplay</div>', unsafe_allow_html=True)
+            for name in det["writers"]:
+                st.markdown(f'<div class="person-row"><span class="person-dot"></span><span class="person-name">{name}</span><span class="person-role">Writer</span></div>', unsafe_allow_html=True)
 
+        # Cast
         if det["cast"]:
-            st.markdown('<div class="detail-section">Cast</div>', unsafe_allow_html=True)
+            st.markdown('<div class="d-section">Cast</div>', unsafe_allow_html=True)
             cc = st.columns(4)
             for i, (name, char) in enumerate(det["cast"]):
                 with cc[i % 4]:
-                    st.markdown(f"""
-                    <div class="cast-card">
-                        <div class="cast-name">{name}</div>
-                        <div class="cast-char">{char if char else "—"}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.markdown(f'<div class="cast-c"><div class="cast-c-name">{name}</div><div class="cast-c-char">{char if char else "—"}</div></div>', unsafe_allow_html=True)
 
-        if det["trailer_key"]:
-            st.markdown('<div class="detail-section">Trailer</div>', unsafe_allow_html=True)
-            st.video(f"https://www.youtube.com/watch?v={det['trailer_key']}")
+        # Trailer
+        if det["trailer"]:
+            st.markdown('<div class="d-section">Trailer</div>', unsafe_allow_html=True)
+            st.video(f"https://www.youtube.com/watch?v={det['trailer']}")
 
     st.stop()
 
 
-# ============================================================
+# ================================================================
 # HOME PAGE
-# ============================================================
+# ================================================================
 
+# Top bar
 st.markdown("""
-<div class="home-hero">
-    <div class="home-logo">Cine<span>Mind</span></div>
-    <div class="home-tagline">Your personal cinema, curated by taste</div>
+<div class="topbar">
+  <div class="brand">Cine<em>Mind</em></div>
+  <div class="nav-links">Film &nbsp;&middot;&nbsp; Discover &nbsp;&middot;&nbsp; Curated</div>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown('<hr class="elegant-divider">', unsafe_allow_html=True)
+# Hero
+st.markdown("""
+<div class="hero">
+  <div class="hero-eyebrow">AI-Powered Film Discovery</div>
+  <div class="hero-title">Find your<br><em>next film</em></div>
+  <div class="hero-sub">Tell us what you love and we will find films crafted for your taste.</div>
+</div>
+""", unsafe_allow_html=True)
 
-# Search section
-st.markdown('<div class="search-wrap">', unsafe_allow_html=True)
-st.markdown('<div class="section-label">Find your next favourite film</div>', unsafe_allow_html=True)
-c1, c2 = st.columns([5, 1], gap="medium")
-with c1:
-    selected = st.selectbox("Movie", movies['title'].values, label_visibility="collapsed")
-with c2:
+# Search panel
+st.markdown('<div class="search-panel">', unsafe_allow_html=True)
+st.markdown('<div class="panel-label">Select a film you enjoy</div>', unsafe_allow_html=True)
+sc1, sc2 = st.columns([5, 1], gap="medium")
+with sc1:
+    chosen = st.selectbox("film", movies["title"].values, label_visibility="collapsed")
+with sc2:
     go = st.button("Discover", use_container_width=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 if go:
-    with st.spinner("Curating recommendations..."):
-        st.session_state.recommendations = recommend(selected)
-        st.session_state.source_movie    = selected
+    with st.spinner("Curating your list..."):
+        st.session_state.recs = recommend(chosen)
+        st.session_state.src  = chosen
 
-# Recommendations
-if st.session_state.recommendations:
-    st.markdown(f'<div class="because-label">Showing recommendations for &nbsp;<strong>{st.session_state.source_movie}</strong></div>', unsafe_allow_html=True)
+# Results
+if st.session_state.recs:
+    st.markdown(f"""
+    <div class="sec-head">
+      <span class="sec-head-text">Because you watched</span>
+      <span class="sec-head-text" style="color:var(--text-b);font-weight:600;">{st.session_state.src}</span>
+      <div class="sec-head-line"></div>
+    </div>
+    """, unsafe_allow_html=True)
 
     cols = st.columns(5, gap="small")
-    for idx, col in enumerate(cols):
-        rec = st.session_state.recommendations[idx]
+    for i, col in enumerate(cols):
+        r = st.session_state.recs[i]
         with col:
-            if rec["poster"]:
-                st.image(
-                    rec["poster"],
-                    use_container_width=True,
-                    caption=None,
-                )
-            if st.button(rec["title"], key=f"rec_{idx}", use_container_width=True):
-                st.session_state.selected_movie_id = rec["movie_id"]
+            if r["poster"]:
+                st.image(r["poster"], use_container_width=True)
+            if st.button(r["title"], key=f"r{i}", use_container_width=True):
+                st.session_state.mid  = r["id"]
                 st.session_state.page = "detail"
                 st.rerun()
 else:
     st.markdown("""
-    <div class="empty-state">
-        <div class="empty-icon">&#127909;</div>
-        <div class="empty-title">Discover your next watch</div>
-        <div class="empty-sub">Select a film above and click <strong>Discover</strong> to get personalised recommendations.<br>Click any film to explore full cast, crew, ratings, and trailer.</div>
+    <div class="empty">
+      <div class="empty-num">01</div>
+      <div class="empty-h">Begin your discovery</div>
+      <div class="empty-p">Choose a film from the search above and click <strong>Discover</strong>.<br>Then select any title to read full details — cast, crew, rating, and trailer.</div>
     </div>
     """, unsafe_allow_html=True)
