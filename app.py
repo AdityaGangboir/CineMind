@@ -1,12 +1,11 @@
 import os
+import pickle
+import urllib.parse
 import gdown
+import pandas as pd
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
-import pickle
-import pandas as pd
-import random
-import urllib.parse
 
 st.set_page_config(page_title="CineMind", page_icon="C", layout="wide")
 
@@ -264,16 +263,6 @@ div[data-testid="stCustomComponentV1"] {
   line-height: 1;
 }
 .d-brand em { font-style: italic; font-weight: 300; color: var(--tm); }
-.d-crumb {
-  font-size: 0.72rem;
-  color: var(--tl);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.d-ch { color: var(--tm); font-weight: 500; }
-.d-cs { color: var(--txl); }
-.d-cc { color: var(--th); font-weight: 500; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* BACK BUTTON override */
 .bwrap .stButton > button {
@@ -383,9 +372,9 @@ div[data-testid="stVideo"] { border: 1px solid var(--bd); border-radius: 2px; ov
 """
 st.markdown(CSS, unsafe_allow_html=True)
 
-# ── Data ──
+# ── Data Loading & Resources ──
 movies_dict_url = "https://drive.google.com/uc?id=1CishRUVNw4h--ffoIblUfpg-p1F5m57c"
-similarity_url  = "https://drive.google.com/uc?id=1tH8Z4HkjoOI5n8n3ixO1L7ylAofLB5UD"
+similarity_url = "https://drive.google.com/uc?id=1tH8Z4HkjoOI5n8n3ixO1L7ylAofLB5UD"
 
 if not os.path.exists("movies_dict.pkl"):
     gdown.download(movies_dict_url, "movies_dict.pkl", quiet=False)
@@ -393,15 +382,16 @@ if not os.path.exists("similarity.pkl"):
     gdown.download(similarity_url, "similarity.pkl", quiet=False)
 
 movies_dict = pickle.load(open("movies_dict.pkl", "rb"))
-movies      = pd.DataFrame(movies_dict)
-similarity  = pickle.load(open("similarity.pkl", "rb"))
+movies = pd.DataFrame(movies_dict)
+similarity = pickle.load(open("similarity.pkl", "rb"))
 
 TMDB_KEY = "8265bd1679663a7ea12ac168da84d2e8"
 
-# Curated universally recognized blockbusters for the try feature
+# Curated universally recognized blockbusters for the Try feature
 TRY_MOVIES = ["Avatar", "The Avengers", "Titanic", "The Dark Knight"]
 
 
+# ── Core Helpers & TMDB Utilities ──
 def fetch_poster(movie_id):
     try:
         r = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}", timeout=7).json()
@@ -413,31 +403,40 @@ def fetch_poster(movie_id):
 
 def fetch_details(movie_id):
     try:
-        d   = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}&language=en-US", timeout=8).json()
-        cr  = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={TMDB_KEY}&language=en-US", timeout=8).json()
-        vid = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={TMDB_KEY}&language=en-US", timeout=8).json()
+        d = requests.get(
+            f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}&language=en-US",
+            timeout=8,
+        ).json()
+        cr = requests.get(
+            f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={TMDB_KEY}&language=en-US",
+            timeout=8,
+        ).json()
+        vid = requests.get(
+            f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={TMDB_KEY}&language=en-US",
+            timeout=8,
+        ).json()
         crew = cr.get("crew", [])
         return {
-            "title":     d.get("title", ""),
-            "tagline":   d.get("tagline", ""),
-            "overview":  d.get("overview", "No summary available."),
-            "release":   d.get("release_date", ""),
-            "runtime":   d.get("runtime", 0),
-            "rating":    round(d.get("vote_average", 0), 1),
-            "votes":     d.get("vote_count", 0),
-            "budget":    d.get("budget", 0),
-            "revenue":   d.get("revenue", 0),
-            "language":  d.get("original_language", "").upper(),
-            "status":    d.get("status", ""),
-            "genres":    [g["name"] for g in d.get("genres", [])],
+            "title": d.get("title", ""),
+            "tagline": d.get("tagline", ""),
+            "overview": d.get("overview", "No summary available."),
+            "release": d.get("release_date", ""),
+            "runtime": d.get("runtime", 0),
+            "rating": round(d.get("vote_average", 0), 1),
+            "votes": d.get("vote_count", 0),
+            "budget": d.get("budget", 0),
+            "revenue": d.get("revenue", 0),
+            "language": d.get("original_language", "").upper(),
+            "status": d.get("status", ""),
+            "genres": [g["name"] for g in d.get("genres", [])],
             "directors": [m["name"] for m in crew if m.get("job") == "Director"],
-            "writers":   list(dict.fromkeys([m["name"] for m in crew if m.get("job") in ("Screenplay","Writer","Story")]))[:4],
-            "cast":      [(m["name"], m.get("character","")) for m in cr.get("cast",[])[:8]],
-            "poster":    f"https://image.tmdb.org/t/p/w500/{d['poster_path']}" if d.get("poster_path") else "",
-            "backdrop":  f"https://image.tmdb.org/t/p/w1280/{d['backdrop_path']}" if d.get("backdrop_path") else "",
-            "trailer":   next((v["key"] for v in vid.get("results",[]) if v.get("site")=="YouTube" and v.get("type")=="Trailer"), None),
-            "imdb_id":   d.get("imdb_id",""),
-            "homepage":  d.get("homepage",""),
+            "writers": list(dict.fromkeys([m["name"] for m in crew if m.get("job") in ("Screenplay", "Writer", "Story")]))[:4],
+            "cast": [(m["name"], m.get("character", "")) for m in cr.get("cast", [])[:8]],
+            "poster": f"https://image.tmdb.org/t/p/w500/{d['poster_path']}" if d.get("poster_path") else "",
+            "backdrop": f"https://image.tmdb.org/t/p/w1280/{d['backdrop_path']}" if d.get("backdrop_path") else "",
+            "trailer": next((v["key"] for v in vid.get("results", []) if v.get("site") == "YouTube" and v.get("type") == "Trailer"), None),
+            "imdb_id": d.get("imdb_id", ""),
+            "homepage": d.get("homepage", ""),
         }
     except Exception:
         return None
@@ -445,31 +444,78 @@ def fetch_details(movie_id):
 
 def recommend(title, n=10):
     idx = movies[movies["title"] == title].index[0]
-    top = sorted(enumerate(similarity[idx]), reverse=True, key=lambda x: x[1])[1:n+1]
-    return [{"title": movies.iloc[i].title, "id": movies.iloc[i].movie_id,
-             "poster": fetch_poster(movies.iloc[i].movie_id)} for i, _ in top]
+    top = sorted(enumerate(similarity[idx]), reverse=True, key=lambda x: x[1])[1:n + 1]
+    return [
+        {
+            "title": movies.iloc[i].title,
+            "id": movies.iloc[i].movie_id,
+            "poster": fetch_poster(movies.iloc[i].movie_id),
+        }
+        for i, _ in top
+    ]
 
 
 def money(v):
-    if not v or v == 0: return "—"
-    if v >= 1e9: return f"${v/1e9:.2f}B"
-    if v >= 1e6: return f"${v/1e6:.1f}M"
+    if not v or v == 0:
+        return "—"
+    if v >= 1e9:
+        return f"${v / 1e9:.2f}B"
+    if v >= 1e6:
+        return f"${v / 1e6:.1f}M"
     return f"${v:,}"
 
 
 def stars_html(s):
     f = round(s / 2)
-    return "".join(['<span class="on">\u2605</span>' if i < f else '\u2605' for i in range(5)])
+    return "".join(['<span class="on">★</span>' if i < f else '★' for i in range(5)])
 
 
-# Session state initialization
-for k, v in [("page","home"),("mid",None),("recs",[]),("src",None),("history",[]),("det_title",""),("_prev_query_movie",None)]:
-    if k not in st.session_state:
-        st.session_state[k] = v
+# ── Navigation & History Helpers ──
+def open_movie_detail(movie_id, title=""):
+    st.session_state.history = []
+    st.session_state.mid = movie_id
+    st.session_state.det_title = title
+    st.session_state.page = "detail"
+    st.query_params["movie"] = str(movie_id)
+    if st.session_state.src:
+        st.query_params["src"] = st.session_state.src
+    st.rerun()
 
-# Synchronize with URL query parameters for browser navigation (Back / Forward buttons & deep linking)
+
+def return_home():
+    if "movie" in st.query_params:
+        del st.query_params["movie"]
+    if "id" in st.query_params:
+        del st.query_params["id"]
+    if st.session_state.history:
+        prev = st.session_state.history.pop()
+        st.session_state.mid = prev["id"]
+        st.session_state.det_title = prev["title"]
+        st.query_params["movie"] = str(prev["id"])
+    else:
+        st.session_state.page = "home"
+        st.session_state.mid = None
+    st.session_state["_prev_query_movie"] = None
+    st.rerun()
+
+
+# ── Session State Initialization ──
+SESSION_DEFAULTS = {
+    "page": "home",
+    "mid": None,
+    "recs": [],
+    "src": None,
+    "history": [],
+    "det_title": "",
+    "_prev_query_movie": None,
+}
+for key, default_val in SESSION_DEFAULTS.items():
+    if key not in st.session_state:
+        st.session_state[key] = default_val
+
+# ── URL Query Parameters Sync (Browser Back / Forward / Deep Linking) ──
 url_movie = st.query_params.get("movie") or st.query_params.get("id")
-url_src   = st.query_params.get("src")
+url_src = st.query_params.get("src")
 
 if url_movie:
     try:
@@ -506,28 +552,18 @@ elif not url_src and not url_movie:
 # ================================================================
 if st.session_state.page == "detail":
 
-    # Navbar: brand on left, back button on right (no middle text)
+    # Navbar: brand on left, back button on right
     nl, nr = st.columns([5, 1], gap="small")
     home_query = f"?src={urllib.parse.quote(st.session_state.src)}" if st.session_state.src else "?"
     with nl:
-        st.markdown(f'<div class="dbar"><a href="{home_query}" target="_self" style="text-decoration:none;color:inherit;"><div class="d-brand">Cine<em>Mind</em></div></a></div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="dbar"><a href="{home_query}" target="_self" style="text-decoration:none;color:inherit;"><div class="d-brand">Cine<em>Mind</em></div></a></div>',
+            unsafe_allow_html=True,
+        )
     with nr:
         st.markdown('<div class="bwrap" style="padding-top:0.75rem;">', unsafe_allow_html=True)
-        if st.button("\u2190 Back", key="back_btn"):
-            if "movie" in st.query_params:
-                del st.query_params["movie"]
-            if "id" in st.query_params:
-                del st.query_params["id"]
-            if st.session_state.history:
-                prev = st.session_state.history.pop()
-                st.session_state.mid = prev["id"]
-                st.session_state.det_title = prev["title"]
-                st.query_params["movie"] = str(prev["id"])
-            else:
-                st.session_state.page = "home"
-                st.session_state.mid = None
-            st.session_state["_prev_query_movie"] = None
-            st.rerun()
+        if st.button("← Back", key="back_btn"):
+            return_home()
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<hr style="margin:0;border:none;border-top:1px solid var(--bd);">', unsafe_allow_html=True)
@@ -537,14 +573,8 @@ if st.session_state.page == "detail":
 
     if not det:
         st.error("Could not load film details.")
-        if st.button("\u2190 Back", key="error_back_btn"):
-            if "movie" in st.query_params:
-                del st.query_params["movie"]
-            if "id" in st.query_params:
-                del st.query_params["id"]
-            st.session_state.page = "home"
-            st.session_state.mid = None
-            st.rerun()
+        if st.button("← Back", key="error_back_btn"):
+            return_home()
         st.stop()
 
     if det["backdrop"]:
@@ -561,10 +591,10 @@ if st.session_state.page == "detail":
         st.markdown(f'<div class="dtfb">{det["title"]}</div><div class="dtgfb">{det["tagline"]}</div>', unsafe_allow_html=True)
 
     year = det["release"][:4] if det["release"] else "—"
-    rh   = det["runtime"] // 60 if det["runtime"] else 0
-    rm   = det["runtime"] % 60  if det["runtime"] else 0
-    rt   = f"{rh}h {rm}m" if det["runtime"] else "—"
-    gi   = " / ".join(det["genres"][:3]) if det["genres"] else ""
+    rh = det["runtime"] // 60 if det["runtime"] else 0
+    rm = det["runtime"] % 60 if det["runtime"] else 0
+    rt = f"{rh}h {rm}m" if det["runtime"] else "—"
+    gi = " / ".join(det["genres"][:3]) if det["genres"] else ""
 
     st.markdown(f"""
     <div class="mstrip">
@@ -650,17 +680,10 @@ def render_movie_card(col, r, i):
             st.markdown(f'<div class="poster-placeholder"><span>{r["title"]}</span></div>', unsafe_allow_html=True)
 
         if st.button(r["title"], key=f"r{i}", use_container_width=True):
-            st.query_params["movie"] = str(r["id"])
-            if st.session_state.src:
-                st.query_params["src"] = st.session_state.src
-            st.session_state.history   = []
-            st.session_state.mid       = r["id"]
-            st.session_state.det_title = r["title"]
-            st.session_state.page      = "detail"
-            st.rerun()
+            open_movie_detail(r["id"], r["title"])
 
 
-# Header — big brand, tagline, nav
+# Header — brand, tagline, nav
 st.markdown("""
 <div class="hdr">
   <div>
@@ -684,7 +707,7 @@ with sc2:
 if go:
     with st.spinner("Curating..."):
         st.session_state.recs = recommend(chosen, n=10)
-        st.session_state.src  = chosen
+        st.session_state.src = chosen
         st.query_params["src"] = chosen
         if "movie" in st.query_params:
             del st.query_params["movie"]
@@ -710,7 +733,7 @@ if st.session_state.recs:
         for i in range(5, min(10, len(st.session_state.recs))):
             render_movie_card(row2[i - 5], st.session_state.recs[i], i)
 
-    # Invisible helper to catch clicks directly on poster images and route to the movie button
+    # Helper component to catch clicks directly on poster images and route to the movie button
     components.html("""
     <script>
     (function() {
@@ -755,9 +778,4 @@ else:
             mid_val = int(m_row["movie_id"].values[0])
             with t_cols[idx]:
                 if st.button(p, key=f"try_{idx}", use_container_width=True):
-                    st.session_state.history = []
-                    st.session_state.mid = mid_val
-                    st.session_state.det_title = p
-                    st.session_state.page = "detail"
-                    st.query_params["movie"] = str(mid_val)
-                    st.rerun()
+                    open_movie_detail(mid_val, p)
