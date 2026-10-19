@@ -2,6 +2,7 @@ import os
 import gdown
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 import pickle
 import pandas as pd
 import random
@@ -165,36 +166,21 @@ div[data-testid="column"] .stButton > button:hover {
 .rlabel strong { color: var(--th); font-weight: 600; letter-spacing: 1px; }
 .rline { flex: 1; height: 1px; background: var(--bd); }
 
-/* ── POSTER LINK & IMAGE IN CARD ── */
-div[data-testid="column"] .stMarkdown:has(.poster-link) {
+/* ── POSTER & CARD STYLES ── */
+div[data-testid="column"] div[data-testid="stImage"] {
   margin-bottom: 0 !important;
+  cursor: pointer !important;
 }
-div[data-testid="column"] .stMarkdown:has(.poster-link) p {
-  margin: 0 !important;
-  line-height: 0 !important;
-}
-.poster-link {
-  display: block;
-  text-decoration: none;
-  cursor: pointer;
-  line-height: 0;
-  margin-bottom: 0 !important;
-  border-radius: 2px 2px 0 0;
-  overflow: hidden;
-}
-.poster-img {
-  border: 1px solid var(--bd);
-  border-bottom: none;
-  border-radius: 2px 2px 0 0;
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
-  display: block;
-  transition: opacity 0.15s ease, filter 0.15s ease;
-}
-.poster-link:hover .poster-img {
-  opacity: 0.88;
-  filter: brightness(0.96);
+div[data-testid="column"] div[data-testid="stImage"] img {
+  border: 1px solid var(--bd) !important;
+  border-bottom: none !important;
+  border-radius: 2px 2px 0 0 !important;
+  width: 100% !important;
+  aspect-ratio: 2 / 3 !important;
+  object-fit: cover !important;
+  display: block !important;
+  cursor: pointer !important;
+  transition: opacity 0.15s ease, filter 0.15s ease !important;
 }
 .poster-placeholder {
   border: 1px solid var(--bd);
@@ -212,22 +198,50 @@ div[data-testid="column"] .stMarkdown:has(.poster-link) p {
   font-size: 0.95rem;
   color: var(--tm);
   line-height: 1.3;
+  cursor: pointer;
 }
-div[data-testid="column"] div[data-testid="stImage"] img {
-  border: 1px solid var(--bd);
-  border-bottom: none;
-  border-radius: 2px 2px 0 0;
-  width: 100%;
-  display: block;
+
+/* CARD FULL-CLICK OVERLAY: clicks anywhere on the card trigger the button */
+div[data-testid="column"]:has(div[data-testid="stImage"]):has(.stButton) {
+  position: relative !important;
+  cursor: pointer !important;
+}
+div[data-testid="column"]:has(div[data-testid="stImage"]) .stButton {
+  position: static !important;
+  margin-top: 0 !important;
+}
+div[data-testid="column"]:has(div[data-testid="stImage"]) .stButton > button {
+  position: static !important;
+}
+div[data-testid="column"]:has(div[data-testid="stImage"]) .stButton > button::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  cursor: pointer !important;
+  z-index: 5 !important;
+  background: transparent !important;
+}
+div[data-testid="column"]:has(div[data-testid="stImage"]):hover div[data-testid="stImage"] img {
+  opacity: 0.88 !important;
+  filter: brightness(0.96) !important;
+}
+div[data-testid="column"]:has(div[data-testid="stImage"]):hover .stButton > button {
+  background: var(--s3) !important;
+  color: var(--th) !important;
+  border-color: var(--bd2) !important;
 }
 
 /* ── EMPTY STATE ── */
 .empty {
   text-align: center;
-  padding: 3rem 2rem;
+  padding: 2.2rem 2rem 1.6rem;
   border: 1px dashed var(--bd);
   border-radius: 2px;
   margin-top: 0.8rem;
+  margin-bottom: 0.8rem;
 }
 .empty-h {
   font-family: 'Cormorant Garamond', serif;
@@ -237,35 +251,39 @@ div[data-testid="column"] div[data-testid="stImage"] img {
 }
 .empty-p { font-size: 0.8rem; color: var(--tl); line-height: 1.7; }
 
-/* ── SUGGESTION ROW ── */
-.sug-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--tl);
-  flex-wrap: wrap;
+/* ── TRY BUTTONS (TERTIARY) ── */
+button[kind="tertiary"],
+button[data-testid="baseButton-tertiary"] {
+  background: var(--s2) !important;
+  color: var(--tm) !important;
+  border: 1px solid var(--bd) !important;
+  border-radius: 2px !important;
+  padding: 0.5rem 0.8rem !important;
+  font-size: 0.74rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.3px !important;
+  text-transform: none !important;
+  width: 100% !important;
+  transition: all 0.15s ease !important;
+  line-height: 1.3 !important;
+  box-shadow: none !important;
+  font-family: 'DM Sans', sans-serif !important;
 }
-.sug-pill {
-  display: inline-block;
-  background: var(--s2);
-  border: 1px solid var(--bd);
-  border-radius: 2px;
-  padding: 4px 11px;
-  font-size: 0.73rem;
-  color: var(--tm);
-  cursor: pointer;
-  letter-spacing: 0.2px;
-  text-decoration: none !important;
-  transition: all 0.15s ease;
-  line-height: 1.4;
+button[kind="tertiary"]:hover,
+button[data-testid="baseButton-tertiary"]:hover {
+  background: var(--s3) !important;
+  color: var(--th) !important;
+  border-color: var(--bd2) !important;
+  transform: translateY(-1px) !important;
 }
-.sug-pill:hover {
-  background: var(--s3);
-  color: var(--th);
-  border-color: var(--bd2);
-  transform: translateY(-1px);
+
+/* Hide helper component iframe container */
+div[data-testid="stCustomComponentV1"] {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* ==================================================
@@ -679,21 +697,10 @@ if st.session_state.page == "detail":
 # Helper to render a movie card with clickable poster & title button
 def render_movie_card(col, r, i):
     with col:
-        src_str = f"&src={urllib.parse.quote(st.session_state.src)}" if st.session_state.src else ""
-        safe_title = r["title"].replace('"', '&quot;')
         if r.get("poster"):
-            poster_markup = f"""
-            <a href="?movie={r['id']}{src_str}" target="_self" class="poster-link" title="{safe_title}"
-               onclick="const col = this.closest('div[data-testid=\\'column\\']'); const btn = col ? col.querySelector('.stButton button') : null; if(btn){{ btn.click(); return false; }}">
-              <img src="{r['poster']}" alt="{safe_title}" class="poster-img" />
-            </a>"""
+            st.image(r["poster"], use_container_width=True)
         else:
-            poster_markup = f"""
-            <a href="?movie={r['id']}{src_str}" target="_self" class="poster-link" title="{safe_title}"
-               onclick="const col = this.closest('div[data-testid=\\'column\\']'); const btn = col ? col.querySelector('.stButton button') : null; if(btn){{ btn.click(); return false; }}">
-              <div class="poster-placeholder"><span>{safe_title}</span></div>
-            </a>"""
-        st.markdown(poster_markup, unsafe_allow_html=True)
+            st.markdown(f'<div class="poster-placeholder"><span>{r["title"]}</span></div>', unsafe_allow_html=True)
 
         if st.button(r["title"], key=f"r{i}", use_container_width=True):
             st.query_params["movie"] = str(r["id"])
@@ -755,24 +762,60 @@ if st.session_state.recs:
         row2 = st.columns(5, gap="small")
         for i in range(5, min(10, len(st.session_state.recs))):
             render_movie_card(row2[i - 5], st.session_state.recs[i], i)
+
+    # Invisible helper to catch clicks directly on poster images and route to the movie button
+    components.html("""
+    <script>
+    (function() {
+      function attachPosterClicks() {
+        try {
+          const pDoc = window.parent.document;
+          if (!pDoc || pDoc._cinePosterAttached) return;
+          pDoc._cinePosterAttached = true;
+          pDoc.addEventListener('click', function(e) {
+            const target = e.target;
+            const img = target.closest('div[data-testid="column"] div[data-testid="stImage"]') ||
+                        target.closest('div[data-testid="column"] img') ||
+                        target.closest('.poster-placeholder');
+            if (img) {
+              const col = img.closest('div[data-testid="column"]');
+              const btn = col ? col.querySelector('.stButton button') : null;
+              if (btn && target !== btn && !btn.contains(target)) {
+                btn.click();
+              }
+            }
+          }, true);
+        } catch(err) {}
+      }
+      attachPosterClicks();
+      setInterval(attachPosterClicks, 400);
+    })();
+    </script>
+    """, height=0, width=0)
 else:
     # Pick 4 random seeds guaranteed to be present in the database
     avail = [s for s in SEEDS if s in movies["title"].values]
     picks = random.sample(avail, min(4, len(avail))) if avail else []
-    pills = []
-    for p in picks:
-        m_row = movies[movies["title"] == p]
-        if not m_row.empty:
-            mid_val = int(m_row["movie_id"].values[0])
-            safe_p = p.replace('"', '&quot;')
-            pills.append(f'<a href="?movie={mid_val}" target="_self" class="sug-pill" title="View details for {safe_p}">{p}</a>')
-    pills_html = "".join(pills)
 
-    st.markdown(f"""
+    st.markdown("""
     <div class="empty">
       <div class="empty-h">Select a film and click Discover</div>
       <div class="empty-p">You'll get 10 personalised recommendations. Click any to see cast, crew, rating &amp; trailer.</div>
-      <div class="sug-row" style="justify-content:center;margin-top:1rem;">
-        <span>Try:</span>{pills_html}
-      </div>
-    </div>""", unsafe_allow_html=True)
+      <div class="slabel" style="margin-top:1.2rem;text-align:center;letter-spacing:2.5px;">Try one of these films</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if picks:
+        t_cols = st.columns(len(picks), gap="small")
+        for idx, p in enumerate(picks):
+            m_row = movies[movies["title"] == p]
+            if not m_row.empty:
+                mid_val = int(m_row["movie_id"].values[0])
+                with t_cols[idx]:
+                    if st.button(p, key=f"try_{idx}", type="tertiary", use_container_width=True):
+                        st.query_params["movie"] = str(mid_val)
+                        st.session_state.history = []
+                        st.session_state.mid = mid_val
+                        st.session_state.det_title = p
+                        st.session_state.page = "detail"
+                        st.rerun()
