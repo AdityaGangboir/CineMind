@@ -142,6 +142,7 @@ div[data-testid="column"] .stButton > button {
   white-space: normal !important;
   min-height: 2.2rem !important;
   height: auto !important;
+  transition: background 0.15s, color 0.15s, border-color 0.15s !important;
 }
 div[data-testid="column"] .stButton > button:hover {
   background: var(--s3) !important;
@@ -176,7 +177,6 @@ div[data-testid="column"] div[data-testid="stImage"] img {
   aspect-ratio: 2 / 3 !important;
   object-fit: cover !important;
   display: block !important;
-  transition: opacity 0.15s ease, filter 0.15s ease !important;
 }
 .poster-placeholder {
   border: 1px solid var(--bd);
@@ -195,7 +195,6 @@ div[data-testid="column"] div[data-testid="stImage"] img {
   color: var(--tm);
   line-height: 1.3;
 }
-
 
 /* ── EMPTY STATE ── */
 .empty {
@@ -442,11 +441,9 @@ def stars_html(s):
     return "".join(['<span class="on">★</span>' if i < f else '★' for i in range(5)])
 
 
-# ── Navigation & History Helpers ──
-def open_movie_detail(movie_id, title=""):
-    st.session_state.history = []
+# ── Navigation & Routing Helpers ──
+def open_movie_detail(movie_id):
     st.session_state.mid = movie_id
-    st.session_state.det_title = title
     st.session_state.page = "detail"
     st.query_params["movie"] = str(movie_id)
     if st.session_state.src:
@@ -459,14 +456,8 @@ def return_home():
         del st.query_params["movie"]
     if "id" in st.query_params:
         del st.query_params["id"]
-    if st.session_state.history:
-        prev = st.session_state.history.pop()
-        st.session_state.mid = prev["id"]
-        st.session_state.det_title = prev["title"]
-        st.query_params["movie"] = str(prev["id"])
-    else:
-        st.session_state.page = "home"
-        st.session_state.mid = None
+    st.session_state.page = "home"
+    st.session_state.mid = None
     st.session_state["_prev_query_movie"] = None
     st.rerun()
 
@@ -477,8 +468,6 @@ SESSION_DEFAULTS = {
     "mid": None,
     "recs": [],
     "src": None,
-    "history": [],
-    "det_title": "",
     "_prev_query_movie": None,
 }
 for key, default_val in SESSION_DEFAULTS.items():
@@ -494,9 +483,6 @@ if url_movie:
         current_mid = int(url_movie)
         st.session_state.mid = current_mid
         st.session_state.page = "detail"
-        match = movies[movies["movie_id"] == current_mid]
-        if not match.empty:
-            st.session_state.det_title = match["title"].values[0]
     except (ValueError, TypeError):
         st.session_state.page = "home"
         st.session_state.mid = None
@@ -643,7 +629,7 @@ if st.session_state.page == "detail":
 # HOME PAGE
 # ================================================================
 
-# Helper to render a movie card with clickable poster & title button
+# Helper to render a movie recommendation card
 def render_movie_card(col, r, i):
     with col:
         if r.get("poster"):
@@ -652,7 +638,7 @@ def render_movie_card(col, r, i):
             st.markdown(f'<div class="poster-placeholder"><span>{r["title"]}</span></div>', unsafe_allow_html=True)
 
         if st.button(r["title"], key=f"r{i}", use_container_width=True):
-            open_movie_detail(r["id"], r["title"])
+            open_movie_detail(r["id"])
 
 
 # Header — brand, tagline, nav
@@ -720,4 +706,4 @@ else:
             mid_val = int(m_row["movie_id"].values[0])
             with t_cols[idx]:
                 if st.button(p, key=f"try_{idx}", use_container_width=True):
-                    open_movie_detail(mid_val, p)
+                    open_movie_detail(mid_val)
