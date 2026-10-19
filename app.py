@@ -556,15 +556,14 @@ if st.session_state.page == "detail":
     with nl:
         st.markdown(f'<div class="dbar"><a href="{home_query}" target="_self" style="text-decoration:none;color:inherit;"><div class="d-brand">Cine<em>Mind</em></div></a></div>', unsafe_allow_html=True)
     with nc:
-        cur = st.session_state.get("det_title", "Film")
-        st.markdown(f"""
-        <div style="padding:0.95rem 0 0.75rem;">
-          <div class="d-crumb">
-            <a href="{home_query}" target="_self" class="d-ch" style="text-decoration:none;cursor:pointer;">Home</a>
-            <span class="d-cs">&#8250;</span>
-            <span class="d-cc" title="{cur}">{cur}</span>
-          </div>
-        </div>""", unsafe_allow_html=True)
+        cur = st.session_state.get("det_title", "")
+        if cur:
+            st.markdown(f"""
+            <div style="padding:0.95rem 0 0.75rem;">
+              <div class="d-crumb">
+                <span class="d-cc" style="max-width:380px;" title="{cur}">{cur}</span>
+              </div>
+            </div>""", unsafe_allow_html=True)
     with nr:
         st.markdown('<div class="bwrap" style="padding-top:0.75rem;">', unsafe_allow_html=True)
         if st.button("\u2190 Back", key="back_btn"):
@@ -590,7 +589,7 @@ if st.session_state.page == "detail":
 
     if not det:
         st.error("Could not load film details.")
-        if st.button("\u2190 Back to Home", key="error_back_btn"):
+        if st.button("\u2190 Back", key="error_back_btn"):
             if "movie" in st.query_params:
                 del st.query_params["movie"]
             if "id" in st.query_params:
