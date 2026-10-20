@@ -190,20 +190,15 @@ if st.session_state.page == "detail":
 
     nl, nr = st.columns([5, 1], gap="small")
     with nl:
-        # CineMind brand → always goes to clean fresh home
         st.markdown(
-            '<div class="dbar">'
-            '<span style="text-decoration:none;color:inherit;cursor:pointer;">'
-            '<div class="d-brand">Cine<em>Mind</em></div>'
-            '</span></div>',
+            '<div class="dbar"><div class="d-brand">Cine<em>Mind</em></div></div>',
             unsafe_allow_html=True,
         )
-        # Invisible Streamlit button overlaid so clicking works
-        if st.button("CineMind", key="brand_home_btn", help="Go to home"):
-            go_home_fresh()
 
     with nr:
-        st.markdown('<div class="bwrap" style="padding-top:0.75rem;">', unsafe_allow_html=True)
+        st.markdown('<div class="bwrap" style="padding-top:0.75rem;display:flex;gap:0.4rem;">', unsafe_allow_html=True)
+        if st.button("⌂ Home", key="home_btn"):
+            go_home_fresh()
         if st.button("← Back", key="back_btn"):
             return_home()
         st.markdown("</div>", unsafe_allow_html=True)
