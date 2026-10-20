@@ -1,5 +1,6 @@
 import os
 import pickle
+import time
 import urllib.parse
 
 import gdown
@@ -10,17 +11,27 @@ import streamlit as st
 st.set_page_config(page_title="CineMind", page_icon="C", layout="wide")
 
 # ── Load external CSS ──
-with open(os.path.join(os.path.dirname(__file__), "static", "style.css")) as f:
+_css_path = os.path.join(os.path.dirname(__file__), "static", "style.css")
+with open(_css_path, encoding="utf-8") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # ── Data Loading ──
-movies_dict_url = "https://drive.google.com/uc?id=1CishRUVNw4h--ffoIblUfpg-p1F5m57c"
-similarity_url  = "https://drive.google.com/uc?id=1tH8Z4HkjoOI5n8n3ixO1L7ylAofLB5UD"
+MOVIES_DICT_URL = "https://drive.google.com/uc?id=1CishRUVNw4h--ffoIblUfpg-p1F5m57c"
+SIMILARITY_URL  = "https://drive.google.com/uc?id=1tH8Z4HkjoOI5n8n3ixO1L7ylAofLB5UD"
 
-if not os.path.exists("movies_dict.pkl"):
-    gdown.download(movies_dict_url, "movies_dict.pkl", quiet=False)
-if not os.path.exists("similarity.pkl"):
-    gdown.download(similarity_url, "similarity.pkl", quiet=False)
+
+def _download_if_missing(path, url, label):
+    if not os.path.exists(path):
+        try:
+            with st.spinner(f"Downloading {label}…"):
+                gdown.download(url, path, quiet=False)
+        except Exception as e:
+            st.error(f"Could not download {label}. Check your internet connection.\n\n`{e}`")
+            st.stop()
+
+
+_download_if_missing("movies_dict.pkl", MOVIES_DICT_URL, "movie data")
+_download_if_missing("similarity.pkl",  SIMILARITY_URL,  "similarity matrix")
 
 movies_dict = pickle.load(open("movies_dict.pkl", "rb"))
 movies      = pd.DataFrame(movies_dict)
@@ -31,12 +42,20 @@ TRY_MOVIES = ["Avatar", "The Avengers", "Titanic", "The Dark Knight"]
 
 
 # ── TMDB Helpers ──
+def _get(url, retries=2, timeout=8):
+    """GET with simple retry on connection error."""
+    for attempt in range(retries + 1):
+        try:
+            return requests.get(url, timeout=timeout).json()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            if attempt == retries:
+                raise
+            time.sleep(1)
+
+
 def fetch_poster(movie_id):
     try:
-        r = requests.get(
-            f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}",
-            timeout=7,
-        ).json()
+        r = _get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}", timeout=7)
         p = r.get("poster_path")
         return f"https://image.tmdb.org/t/p/w500/{p}" if p else ""
     except Exception:
@@ -45,9 +64,9 @@ def fetch_poster(movie_id):
 
 def fetch_details(movie_id):
     try:
-        d   = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}&language=en-US", timeout=8).json()
-        cr  = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={TMDB_KEY}&language=en-US", timeout=8).json()
-        vid = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={TMDB_KEY}&language=en-US", timeout=8).json()
+        d   = _get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}&language=en-US")
+        cr  = _get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={TMDB_KEY}&language=en-US")
+        vid = _get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={TMDB_KEY}&language=en-US")
         crew = cr.get("crew", [])
         return {
             "title":     d.get("title", ""),
@@ -69,9 +88,12 @@ def fetch_details(movie_id):
             "cast":      [(m["name"], m.get("character", "")) for m in cr.get("cast", [])[:8]],
             "poster":    f"https://image.tmdb.org/t/p/w500/{d['poster_path']}" if d.get("poster_path") else "",
             "backdrop":  f"https://image.tmdb.org/t/p/w1280/{d['backdrop_path']}" if d.get("backdrop_path") else "",
-            "trailer":   next((v["key"] for v in vid.get("results", []) if v.get("site") == "YouTube" and v.get("type") == "Trailer"), None),
-            "imdb_id":   d.get("imdb_id", ""),
-            "homepage":  d.get("homepage", ""),
+            "trailer":   next(
+                (v["key"] for v in vid.get("results", []) if v.get("site") == "YouTube" and v.get("type") == "Trailer"),
+                None,
+            ),
+            "imdb_id":  d.get("imdb_id", ""),
+            "homepage": d.get("homepage", ""),
         }
     except Exception:
         return None
@@ -102,7 +124,7 @@ def money(v):
 
 def stars_html(s):
     f = round(s / 2)
-    return "".join(['<span class="on">★</span>' if i < f else '★' for i in range(5)])
+    return "".join(['<span class="on">★</span>' if i < f else "★" for i in range(5)])
 
 
 # ── Navigation Helpers ──
@@ -116,6 +138,7 @@ def open_movie_detail(movie_id):
 
 
 def return_home():
+    """Go back to home, preserving recs/src so the results are still visible."""
     for k in ("movie", "id"):
         if k in st.query_params:
             del st.query_params[k]
@@ -125,8 +148,26 @@ def return_home():
     st.rerun()
 
 
+def go_home_fresh():
+    """Navigate to a completely clean home page (no prior recommendations)."""
+    st.session_state.page = "home"
+    st.session_state.mid  = None
+    st.session_state.src  = None
+    st.session_state.recs = []
+    st.session_state["_prev_query_movie"] = None
+    # Clear all query params
+    st.query_params.clear()
+    st.rerun()
+
+
 # ── Session State ──
-SESSION_DEFAULTS = {"page": "home", "mid": None, "recs": [], "src": None, "_prev_query_movie": None}
+SESSION_DEFAULTS = {
+    "page": "home",
+    "mid": None,
+    "recs": [],
+    "src": None,
+    "_prev_query_movie": None,
+}
 for k, v in SESSION_DEFAULTS.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -164,12 +205,14 @@ elif not url_src and not url_movie:
 # ================================================================
 if st.session_state.page == "detail":
 
-    home_query = f"?src={urllib.parse.quote(st.session_state.src)}" if st.session_state.src else "?"
+    # Navbar: CineMind logo → clean home, Back button → home with recs preserved
     nl, nr = st.columns([5, 1], gap="small")
     with nl:
         st.markdown(
-            f'<div class="dbar"><a href="{home_query}" target="_self" style="text-decoration:none;color:inherit;">'
-            f'<div class="d-brand">Cine<em>Mind</em></div></a></div>',
+            '<div class="dbar">'
+            '<a href="/" target="_self" style="text-decoration:none;color:inherit;">'
+            '<div class="d-brand">Cine<em>Mind</em></div>'
+            '</a></div>',
             unsafe_allow_html=True,
         )
     with nr:
@@ -180,11 +223,11 @@ if st.session_state.page == "detail":
 
     st.markdown('<hr style="margin:0;border:none;border-top:1px solid var(--bd);">', unsafe_allow_html=True)
 
-    with st.spinner("Loading..."):
+    with st.spinner("Loading…"):
         det = fetch_details(st.session_state.mid)
 
     if not det:
-        st.error("Could not load film details.")
+        st.error("Could not load film details. Please check your internet connection and try again.")
         if st.button("← Back", key="error_back_btn"):
             return_home()
         st.stop()
@@ -246,9 +289,15 @@ if st.session_state.page == "detail":
               <div class="fc"><div class="fk">Box Office</div><div class="fv">{money(det['revenue'])}</div></div>
             </div>""", unsafe_allow_html=True)
         if det["imdb_id"]:
-            st.markdown(f'<a class="exa" href="https://www.imdb.com/title/{det["imdb_id"]}" target="_blank">&#9733; View on IMDb</a>', unsafe_allow_html=True)
+            st.markdown(
+                f'<a class="exa" href="https://www.imdb.com/title/{det["imdb_id"]}" target="_blank">&#9733; View on IMDb</a>',
+                unsafe_allow_html=True,
+            )
         if det["homepage"]:
-            st.markdown(f'<a class="exa" href="{det["homepage"]}" target="_blank">&#8594; Official Site</a>', unsafe_allow_html=True)
+            st.markdown(
+                f'<a class="exa" href="{det["homepage"]}" target="_blank">&#8594; Official Site</a>',
+                unsafe_allow_html=True,
+            )
 
     with rc:
         if det["genres"]:
@@ -260,20 +309,29 @@ if st.session_state.page == "detail":
 
         if det["directors"]:
             st.markdown('<div class="ds">Direction</div>', unsafe_allow_html=True)
-            for n in det["directors"]:
-                st.markdown(f'<div class="pr"><span class="pdot"></span><span class="pn">{n}</span><span class="po">Director</span></div>', unsafe_allow_html=True)
+            for name in det["directors"]:
+                st.markdown(
+                    f'<div class="pr"><span class="pdot"></span><span class="pn">{name}</span><span class="po">Director</span></div>',
+                    unsafe_allow_html=True,
+                )
 
         if det["writers"]:
             st.markdown('<div class="ds">Screenplay</div>', unsafe_allow_html=True)
-            for n in det["writers"]:
-                st.markdown(f'<div class="pr"><span class="pdot"></span><span class="pn">{n}</span><span class="po">Writer</span></div>', unsafe_allow_html=True)
+            for name in det["writers"]:
+                st.markdown(
+                    f'<div class="pr"><span class="pdot"></span><span class="pn">{name}</span><span class="po">Writer</span></div>',
+                    unsafe_allow_html=True,
+                )
 
         if det["cast"]:
             st.markdown('<div class="ds">Cast</div>', unsafe_allow_html=True)
             cc = st.columns(4)
             for i, (name, char) in enumerate(det["cast"]):
                 with cc[i % 4]:
-                    st.markdown(f'<div class="cc"><div class="ccn">{name}</div><div class="ccc">{char or "—"}</div></div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="cc"><div class="ccn">{name}</div><div class="ccc">{char or "—"}</div></div>',
+                        unsafe_allow_html=True,
+                    )
 
         if det["trailer"]:
             st.markdown('<div class="ds">Trailer</div>', unsafe_allow_html=True)
@@ -291,21 +349,31 @@ def render_movie_card(col, r, i):
         if r.get("poster"):
             st.image(r["poster"], use_container_width=True)
         else:
-            st.markdown(f'<div class="poster-placeholder"><span>{r["title"]}</span></div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="poster-placeholder"><span>{r["title"]}</span></div>',
+                unsafe_allow_html=True,
+            )
         if st.button(r["title"], key=f"r{i}", use_container_width=True):
             open_movie_detail(r["id"])
 
 
-# Header
-st.markdown("""
-<div class="hdr">
-  <div>
-    <div class="brand">Cine<em>Mind</em></div>
-    <div class="brand-tag">Find your next film</div>
-  </div>
-  <div class="hdr-right">Film &nbsp;&middot;&nbsp; Discover &nbsp;&middot;&nbsp; Curated</div>
-</div>
-""", unsafe_allow_html=True)
+# Header — CineMind logo is a button that resets to fresh home
+hdr_col, _ = st.columns([6, 1])
+with hdr_col:
+    st.markdown("""
+    <div class="hdr">
+      <div>
+        <div class="brand">Cine<em>Mind</em></div>
+        <div class="brand-tag">Find your next film</div>
+      </div>
+      <div class="hdr-right">Film &nbsp;&middot;&nbsp; Discover &nbsp;&middot;&nbsp; Curated</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Hidden button behind the brand for fresh-home navigation
+if st.session_state.recs:
+    if st.button("↺ Start over", key="home_reset", help="Clear results and start fresh"):
+        go_home_fresh()
 
 # Search row
 st.markdown('<div class="slabel">Select a film you enjoy</div>', unsafe_allow_html=True)
@@ -318,7 +386,7 @@ with sc2:
     go = st.button("Discover", use_container_width=True)
 
 if go:
-    with st.spinner("Curating..."):
+    with st.spinner("Curating…"):
         st.session_state.recs = recommend(chosen, n=5)
         st.session_state.src  = chosen
         st.query_params["src"] = chosen
@@ -342,7 +410,7 @@ else:
     st.markdown("""
     <div class="empty">
       <div class="empty-h">Select a film and click Discover</div>
-      <div class="empty-p">You'll get 5 personalised recommendations. Click any to see cast, crew, rating &amp; trailer.</div>
+      <div class="empty-p">You'll get 5 personalised recommendations.<br>Click any poster to see cast, crew, rating &amp; trailer.</div>
       <div class="slabel" style="margin-top:1.2rem;text-align:center;letter-spacing:2.5px;">Try one of these films</div>
     </div>
     """, unsafe_allow_html=True)
