@@ -11,27 +11,21 @@ import streamlit as st
 st.set_page_config(page_title="CineMind", page_icon="C", layout="wide")
 
 # ── Load external CSS ──
-_css_path = os.path.join(os.path.dirname(__file__), "static", "style.css")
-with open(_css_path, encoding="utf-8") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+_css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "style.css")
+with open(_css_path, encoding="utf-8") as _f:
+    st.markdown(f"<style>{_f.read()}</style>", unsafe_allow_html=True)
 
 # ── Data Loading ──
 MOVIES_DICT_URL = "https://drive.google.com/uc?id=1CishRUVNw4h--ffoIblUfpg-p1F5m57c"
 SIMILARITY_URL  = "https://drive.google.com/uc?id=1tH8Z4HkjoOI5n8n3ixO1L7ylAofLB5UD"
 
+if not os.path.exists("movies_dict.pkl"):
+    with st.spinner("Downloading movie data…"):
+        gdown.download(MOVIES_DICT_URL, "movies_dict.pkl", quiet=False)
 
-def _download_if_missing(path, url, label):
-    if not os.path.exists(path):
-        try:
-            with st.spinner(f"Downloading {label}…"):
-                gdown.download(url, path, quiet=False)
-        except Exception as e:
-            st.error(f"Could not download {label}. Check your internet connection.\n\n`{e}`")
-            st.stop()
-
-
-_download_if_missing("movies_dict.pkl", MOVIES_DICT_URL, "movie data")
-_download_if_missing("similarity.pkl",  SIMILARITY_URL,  "similarity matrix")
+if not os.path.exists("similarity.pkl"):
+    with st.spinner("Downloading similarity matrix…"):
+        gdown.download(SIMILARITY_URL, "similarity.pkl", quiet=False)
 
 movies_dict = pickle.load(open("movies_dict.pkl", "rb"))
 movies      = pd.DataFrame(movies_dict)
@@ -43,23 +37,19 @@ TRY_MOVIES = ["Avatar", "The Avengers", "Titanic", "The Dark Knight"]
 
 # ── TMDB Helpers ──
 def _get(url, retries=2, timeout=8):
-    """GET with simple retry on connection error."""
     for attempt in range(retries + 1):
         try:
             return requests.get(url, timeout=timeout).json()
-        except (requests.ConnectionError, requests.Timeout) as e:
+        except Exception:
             if attempt == retries:
-                raise
+                return {}
             time.sleep(1)
 
 
 def fetch_poster(movie_id):
-    try:
-        r = _get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}", timeout=7)
-        p = r.get("poster_path")
-        return f"https://image.tmdb.org/t/p/w500/{p}" if p else ""
-    except Exception:
-        return ""
+    r = _get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}", timeout=7)
+    p = r.get("poster_path")
+    return f"https://image.tmdb.org/t/p/w500/{p}" if p else ""
 
 
 def fetch_details(movie_id):
@@ -67,6 +57,8 @@ def fetch_details(movie_id):
         d   = _get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={TMDB_KEY}&language=en-US")
         cr  = _get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={TMDB_KEY}&language=en-US")
         vid = _get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={TMDB_KEY}&language=en-US")
+        if not d or not d.get("title"):
+            return None
         crew = cr.get("crew", [])
         return {
             "title":     d.get("title", ""),
@@ -123,11 +115,11 @@ def money(v):
 
 
 def stars_html(s):
-    f = round(s / 2)
-    return "".join(['<span class="on">★</span>' if i < f else "★" for i in range(5)])
+    filled = round(s / 2)
+    return "".join(['<span class="on">★</span>' if i < filled else "★" for i in range(5)])
 
 
-# ── Navigation Helpers ──
+# ── Navigation ──
 def open_movie_detail(movie_id):
     st.session_state.mid  = movie_id
     st.session_state.page = "detail"
@@ -138,7 +130,7 @@ def open_movie_detail(movie_id):
 
 
 def return_home():
-    """Go back to home, preserving recs/src so the results are still visible."""
+    """Go back to home keeping previous recommendations visible."""
     for k in ("movie", "id"):
         if k in st.query_params:
             del st.query_params[k]
@@ -149,26 +141,18 @@ def return_home():
 
 
 def go_home_fresh():
-    """Navigate to a completely clean home page (no prior recommendations)."""
+    """Reset everything — clean slate home page."""
     st.session_state.page = "home"
     st.session_state.mid  = None
     st.session_state.src  = None
     st.session_state.recs = []
     st.session_state["_prev_query_movie"] = None
-    # Clear all query params
     st.query_params.clear()
     st.rerun()
 
 
 # ── Session State ──
-SESSION_DEFAULTS = {
-    "page": "home",
-    "mid": None,
-    "recs": [],
-    "src": None,
-    "_prev_query_movie": None,
-}
-for k, v in SESSION_DEFAULTS.items():
+for k, v in {"page": "home", "mid": None, "recs": [], "src": None, "_prev_query_movie": None}.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
@@ -183,8 +167,7 @@ if url_movie:
     except (ValueError, TypeError):
         st.session_state.page = "home"
         st.session_state.mid  = None
-        if "movie" in st.query_params:
-            del st.query_params["movie"]
+        st.query_params.pop("movie", None)
 elif not url_movie and st.session_state.get("_prev_query_movie"):
     st.session_state.page = "home"
     st.session_state.mid  = None
@@ -205,16 +188,20 @@ elif not url_src and not url_movie:
 # ================================================================
 if st.session_state.page == "detail":
 
-    # Navbar: CineMind logo → clean home, Back button → home with recs preserved
     nl, nr = st.columns([5, 1], gap="small")
     with nl:
+        # CineMind brand → always goes to clean fresh home
         st.markdown(
             '<div class="dbar">'
-            '<a href="/" target="_self" style="text-decoration:none;color:inherit;">'
+            '<span style="text-decoration:none;color:inherit;cursor:pointer;">'
             '<div class="d-brand">Cine<em>Mind</em></div>'
-            '</a></div>',
+            '</span></div>',
             unsafe_allow_html=True,
         )
+        # Invisible Streamlit button overlaid so clicking works
+        if st.button("CineMind", key="brand_home_btn", help="Go to home"):
+            go_home_fresh()
+
     with nr:
         st.markdown('<div class="bwrap" style="padding-top:0.75rem;">', unsafe_allow_html=True)
         if st.button("← Back", key="back_btn"):
@@ -357,23 +344,16 @@ def render_movie_card(col, r, i):
             open_movie_detail(r["id"])
 
 
-# Header — CineMind logo is a button that resets to fresh home
-hdr_col, _ = st.columns([6, 1])
-with hdr_col:
-    st.markdown("""
-    <div class="hdr">
-      <div>
-        <div class="brand">Cine<em>Mind</em></div>
-        <div class="brand-tag">Find your next film</div>
-      </div>
-      <div class="hdr-right">Film &nbsp;&middot;&nbsp; Discover &nbsp;&middot;&nbsp; Curated</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Hidden button behind the brand for fresh-home navigation
-if st.session_state.recs:
-    if st.button("↺ Start over", key="home_reset", help="Clear results and start fresh"):
-        go_home_fresh()
+# Header
+st.markdown("""
+<div class="hdr">
+  <div>
+    <div class="brand">Cine<em>Mind</em></div>
+    <div class="brand-tag">Find your next film</div>
+  </div>
+  <div class="hdr-right">Film &nbsp;&middot;&nbsp; Discover &nbsp;&middot;&nbsp; Curated</div>
+</div>
+""", unsafe_allow_html=True)
 
 # Search row
 st.markdown('<div class="slabel">Select a film you enjoy</div>', unsafe_allow_html=True)
@@ -390,10 +370,9 @@ if go:
         st.session_state.recs = recommend(chosen, n=5)
         st.session_state.src  = chosen
         st.query_params["src"] = chosen
-        if "movie" in st.query_params:
-            del st.query_params["movie"]
+        st.query_params.pop("movie", None)
 
-# Results grid — top 5 only
+# Results grid
 if st.session_state.recs:
     st.markdown(f"""
     <div class="rlabel">
@@ -411,7 +390,7 @@ else:
     <div class="empty">
       <div class="empty-h">Select a film and click Discover</div>
       <div class="empty-p">You'll get 5 personalised recommendations.<br>Click any poster to see cast, crew, rating &amp; trailer.</div>
-      <div class="slabel" style="margin-top:1.2rem;text-align:center;letter-spacing:2.5px;">Try one of these films</div>
+      <div class="slabel" style="margin-top:1.2rem;text-align:center;letter-spacing:2.5px;">Or try one of these</div>
     </div>
     """, unsafe_allow_html=True)
 

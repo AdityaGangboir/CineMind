@@ -112,7 +112,7 @@ div[data-baseweb="select"] > div {
   box-shadow: none !important;
 }
 
-/* ── CARD TITLE BUTTON (inside columns) ── */
+/* ── CARD TITLE BUTTON (inside result columns) ── */
 div[data-testid="column"] .stButton > button {
   background: var(--wh) !important;
   color: var(--th) !important;
@@ -203,13 +203,16 @@ div[data-testid="column"] div[data-testid="stImage"] img {
    DETAIL PAGE
    ================================================================ */
 
+/* Brand button on detail page — hide the default Streamlit button styling */
+[data-testid="stButton"] > button[kind="secondary"]#brand_home_btn {
+  display: none;
+}
+
 /* DETAIL NAVBAR */
 .dbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0.9rem 0 0.8rem;
-  border-bottom: 1px solid var(--bd);
   margin-bottom: 0;
 }
 .d-brand {
@@ -218,6 +221,7 @@ div[data-testid="column"] div[data-testid="stImage"] img {
   font-weight: 600;
   color: var(--th);
   line-height: 1;
+  cursor: pointer;
 }
 .d-brand em { font-style: italic; font-weight: 300; color: var(--tm); }
 
@@ -258,7 +262,12 @@ div[data-testid="column"] div[data-testid="stImage"] img {
 .dhero-g {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, transparent 15%, rgba(250,247,242,0.5) 60%, rgba(250,247,242,1) 100%);
+  background: linear-gradient(
+    to bottom,
+    transparent 15%,
+    rgba(250,247,242,0.5) 60%,
+    rgba(250,247,242,1) 100%
+  );
 }
 .dhero-t {
   position: absolute;
@@ -392,7 +401,12 @@ div[data-testid="column"] div[data-testid="stImage"] img {
   margin-bottom: 7px;
 }
 .ccn { font-size: 0.76rem; font-weight: 500; color: var(--th); margin-bottom: 2px; }
-.ccc { font-family: 'Cormorant Garamond', serif; font-size: 0.78rem; color: var(--tl); font-style: italic; }
+.ccc {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.78rem;
+  color: var(--tl);
+  font-style: italic;
+}
 
 /* POSTER (detail page) */
 div[data-testid="stImage"] img {
@@ -404,8 +418,20 @@ div[data-testid="stImage"] img {
 .fin { display: flex; border: 1px solid var(--bd); border-radius: 2px; overflow: hidden; margin-top: 9px; }
 .fc { flex: 1; padding: 10px; text-align: center; background: var(--wh); }
 .fc + .fc { border-left: 1px solid var(--bd); }
-.fk { font-size: 0.55rem; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--tl); margin-bottom: 3px; }
-.fv { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 500; color: var(--th); }
+.fk {
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--tl);
+  margin-bottom: 3px;
+}
+.fv {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--th);
+}
 
 /* EXTERNAL LINKS */
 .exa {
